@@ -13,6 +13,7 @@ Build a functional school ecommerce app with a Chrome Hearts product catalog, us
 | Backend | Supabase |
 | Payment provider | Xendit |
 | Catalog concept | Chrome Hearts products |
+| Visual direction | Dark theme with black/charcoal surfaces, silver accents, and light text |
 | Shopping | Working Add to Cart and Buy Now |
 | Delivery details | Saved customer addresses and checkout |
 | Administration | Include an admin panel |
@@ -26,7 +27,7 @@ These are planning defaults, not additional confirmed requirements:
 - Android APK as the primary deliverable, following the class handout. Other Flutter platform folders already exist; their presence does not establish delivery requirements.
 - One store, with customer and admin roles in the same Flutter app.
 - Xendit Test Mode for presentation payments.
-- Black, white, and silver visual palette with prominent product photos.
+- Prominent product photos and Gothic-inspired display typography within the confirmed dark theme; final font and images are still to be selected.
 - Categories such as jewelry, clothing, eyewear, and accessories; finalize the actual sample catalog and variants before seeding.
 - A fixed shipping fee calculated by the backend; the amount is undecided.
 - Order history and admin-managed fulfillment status for the school demo.
@@ -47,6 +48,10 @@ These are planning defaults, not additional confirmed requirements:
 | Account | Profile, orders, addresses, and sign out |
 
 Proposed main navigation: Home, Categories, Cart, Account.
+
+Detailed proposed layouts and screen states: [Screen plan](docs/SCREEN_PLAN.md).
+Offline interactive design preview: [Shopping flow](docs/previews/shopping-flow.html).
+These artifacts use fictional data for review; the Flutter app has not been implemented from them yet.
 
 ### Shopping behavior
 

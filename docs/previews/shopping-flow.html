@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0e0e10">
+  <title>Shopping flow · Dark design preview</title>
+  <style>
+    :root { color-scheme:dark; --ink:#f2f0eb; --muted:#aaa8a3; --line:#373739; --paper:#101012; --surface:#1b1b1e; --silver:#d9d6cf; --on-silver:#111113; --display:"Old English Text MT","Lucida Blackletter",Georgia,serif; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:radial-gradient(ellipse at 65% 0%,#252529 0%,#111113 42%,#080809 100%); color:var(--ink); font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; }
+    button,input { font:inherit; }
+    button { cursor:pointer; }
+    button:disabled { cursor:not-allowed; opacity:.4; }
+    button:focus-visible,input:focus-visible { outline:2px solid var(--silver); outline-offset:4px; }
+    button { color:inherit; }
+    [hidden] { display:none !important; }
+    .workspace { max-width:1060px; margin:auto; padding:44px 24px; display:grid; grid-template-columns:1fr 390px; gap:72px; align-items:start; }
+    .intro { position:sticky; top:44px; }
+    .eyebrow { text-transform:uppercase; letter-spacing:.2em; font-size:10px; font-weight:700; }
+    .intro h1 { font:normal clamp(38px,5vw,62px)/1.05 Georgia,serif; letter-spacing:-.04em; margin:20px 0; }
+    .intro p { color:var(--muted); max-width:360px; }
+    .screen-picker { display:grid; gap:8px; margin:28px 0; }
+    .screen-picker button { text-align:left; padding:14px 16px; border:1px solid var(--line); background:#151517; display:flex; gap:18px; align-items:center; }
+    .screen-picker button[aria-pressed="true"] { background:linear-gradient(115deg,#f0eee8,#bcbab5); color:var(--on-silver); border-color:var(--silver); }
+    .screen-picker span { opacity:.6; font-size:11px; }
+    .note { border-top:1px solid var(--line); padding-top:18px; font-size:12px; }
+    .phone { border:1px solid #535357; background:var(--paper); border-radius:30px; overflow:hidden; box-shadow:0 28px 80px #0009,0 0 0 5px #1a1a1c,inset 0 1px 0 #ffffff12; }
+    .status-bar { padding:12px 24px 8px; display:flex; justify-content:space-between; font-size:10px; font-weight:700; }
+    .screen { min-height:740px; display:flex; flex-direction:column; }
+    .app-header { min-height:70px; padding:12px 20px; display:flex; gap:12px; justify-content:space-between; align-items:center; border-bottom:1px solid var(--line); background:#0c0c0e; }
+    .brand { font:700 24px/1.1 var(--display); letter-spacing:-.04em; color:var(--silver); }
+    .brand small { display:block; font:9px/1.5 system-ui,sans-serif; letter-spacing:.25em; margin-top:6px; color:var(--muted); }
+    h2 { font:normal 29px/1.15 Georgia,serif; letter-spacing:-.03em; margin:0; }
+    h3 { font-size:13px; margin:0 0 10px; }
+    p { margin:8px 0; }
+    .icon-button { min-width:44px; min-height:44px; border:1px solid var(--line); border-radius:50%; background:transparent; position:relative; display:inline-flex; align-items:center; justify-content:center; }
+    .icon { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.5; }
+    .badge { position:absolute; top:-5px; right:-4px; background:var(--silver); color:var(--on-silver); border-radius:20px; padding:1px 5px; font:10px/16px system-ui,sans-serif; }
+    .content { padding:20px; flex:1; }
+    .search { width:100%; min-height:46px; border:1px solid var(--line); background:var(--surface); color:var(--ink); padding:0 14px; border-radius:2px; }
+    .search::placeholder { color:var(--muted); opacity:1; }
+    .hero { background:radial-gradient(ellipse at 100% 70%,#39393e 0%,#171719 47%,#080809 100%); color:var(--ink); border:1px solid #4a4a4d; margin:18px 0; padding:24px 20px; position:relative; overflow:hidden; min-height:178px; }
+    .hero::before { content:"✦"; position:absolute; right:16px; top:10px; font-size:18px; color:var(--silver); }
+    .hero h2 { font:normal 34px/1.05 var(--display); max-width:200px; margin:12px 0; position:relative; z-index:1; }
+    .hero .eyebrow { color:#bcbab5; }
+    .hero-decoration { position:absolute; right:0; bottom:-35px; width:150px; height:190px; opacity:.65; transform:rotate(-15deg); }
+    .text-action { border:0; padding:8px 0; background:transparent; text-decoration:underline; text-underline-offset:4px; font-size:12px; min-height:36px; }
+    .hero .text-action { color:var(--silver); }
+    .chips { display:flex; gap:7px; overflow-x:auto; padding:2px 1px 12px; }
+    .chip { white-space:nowrap; border:1px solid var(--line); background:transparent; padding:9px 13px; border-radius:30px; font-size:11px; }
+    .chip[aria-pressed="true"] { color:var(--on-silver); background:var(--silver); border-color:var(--silver); }
+    .section-title { display:flex; align-items:center; justify-content:space-between; margin:12px 0 16px; }
+    .section-title h2 { font-size:25px; }
+    .subtle { color:var(--muted); font-size:12px; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:22px 12px; }
+    .product-card { display:block; background:none; padding:0; border:0; text-align:left; width:100%; }
+    .product-art { background:radial-gradient(ellipse at 50% 38%,#404044 0%,#252528 55%,#171719 100%); border:1px solid #323235; display:grid; place-items:center; aspect-ratio:1/1.12; margin-bottom:9px; }
+    .product-art svg { width:76%; height:76%; }
+    .product-card .eyebrow { font-size:8px; color:var(--muted); letter-spacing:.13em; }
+    .product-name { display:block; margin:4px 0; font-size:12px; font-weight:600; }
+    .price { font-size:12px; }
+    .bottom-nav { display:flex; justify-content:space-around; border-top:1px solid var(--line); background:var(--paper); padding:8px 8px 14px; margin-top:20px; }
+    .bottom-nav button { border:0; background:transparent; min-height:46px; min-width:58px; display:grid; place-items:center; gap:3px; font-size:9px; color:var(--muted); }
+    .bottom-nav .active { color:var(--silver); font-weight:700; }
+    .detail-art { aspect-ratio:1.15; background:radial-gradient(ellipse at 50% 40%,#454549 0%,#28282b 50%,#151517 100%); position:relative; display:grid; place-items:center; }
+    .detail-art>svg { height:78%; width:78%; }
+    .image-count { position:absolute; bottom:14px; left:20px; font-size:10px; background:#111114dd; color:var(--silver); border:1px solid #565659; padding:4px 9px; border-radius:15px; }
+    .detail-heading { display:flex; gap:12px; justify-content:space-between; margin:8px 0 22px; align-items:start; }
+    .detail-heading h2 { font-size:27px; margin-top:5px; }
+    .detail-price { white-space:nowrap; font-weight:600; margin-top:8px; }
+    .field-label { display:flex; align-items:center; justify-content:space-between; margin:20px 0 10px; font-size:12px; }
+    .sizes { display:flex; flex-wrap:wrap; gap:8px; }
+    .size { min-width:49px; min-height:44px; border:1px solid var(--line); background:transparent; }
+    .size[aria-pressed="true"] { background:var(--silver); color:var(--on-silver); border-color:var(--silver); }
+    .size:disabled { text-decoration:line-through; }
+    .stepper { display:inline-flex; align-items:center; border:1px solid var(--line); background:var(--surface); }
+    .stepper button { min-width:40px; min-height:40px; background:none; border:0; font-size:17px; }
+    .stepper output { min-width:34px; text-align:center; font-size:12px; }
+    .description { border-top:1px solid var(--line); margin-top:22px; padding-top:18px; }
+    .description p { font-size:12px; color:var(--muted); }
+    .action-bar { position:sticky; bottom:0; padding:15px 20px 20px; border-top:1px solid var(--line); background:var(--paper); display:flex; align-items:center; gap:10px; }
+    .button { min-height:48px; padding:12px 16px; background:linear-gradient(115deg,#eeece6,#c2bfb8); color:var(--on-silver); border:1px solid var(--silver); font-size:12px; font-weight:600; }
+    .button.secondary { background:transparent; color:var(--silver); border-color:#626265; }
+    .action-bar .button { flex:1; }
+    .action-bar .total { flex:1; }
+    .total small { display:block; font-size:10px; color:var(--muted); }
+    .total strong { display:block; font-size:20px; }
+    .cart-select { display:flex; gap:10px; align-items:center; padding:6px 0 18px; border-bottom:1px solid var(--line); }
+    input[type=checkbox],input[type=radio] { accent-color:var(--silver); width:18px; height:18px; flex-shrink:0; }
+    .cart-row { padding:20px 0; border-bottom:1px solid var(--line); display:grid; grid-template-columns:20px 72px 1fr; gap:10px; align-items:start; }
+    .cart-row>input { margin-top:28px; }
+    .thumb { width:72px; height:84px; background:radial-gradient(ellipse at center,#3e3e42,#1e1e21); border:1px solid var(--line); display:grid; place-items:center; }
+    .thumb svg { width:85%; height:85%; }
+    .cart-row h3 { margin:0 0 3px; font-size:12px; }
+    .cart-row .stepper { margin-top:12px; }
+    .cart-row .stepper button { min-width:32px; min-height:32px; }
+    .row-controls { display:flex; justify-content:space-between; gap:6px; align-items:end; }
+    .remove { border:0; background:transparent; padding:6px; color:var(--muted); font-size:10px; min-height:32px; }
+    .shipping-note { display:flex; gap:12px; margin:22px 0; padding:15px; background:var(--surface); border:1px solid var(--line); font-size:11px; color:var(--muted); }
+    .checkout-content { background:#0c0c0e; padding:16px; }
+    .panel { background:var(--surface); border:1px solid var(--line); padding:16px; margin-bottom:12px; }
+    .panel-heading { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+    .panel-heading h3 { margin:0; }
+    .panel-heading .text-action { min-height:32px; padding:0; }
+    .address-line { display:flex; gap:10px; }
+    .address-line .icon { flex-shrink:0; margin-top:3px; }
+    .address-name { font-size:12px; font-weight:600; }
+    .address-text { font-size:11px; color:var(--muted); line-height:1.6; }
+    .order-item { display:flex; gap:12px; margin-top:12px; }
+    .order-item .thumb { width:52px; height:60px; flex-shrink:0; }
+    .order-item h3 { font-size:11px; margin:0; }
+    .order-item .subtle { font-size:10px; }
+    .order-item .item-price { margin-left:auto; white-space:nowrap; font-size:11px; }
+    .summary-line { display:flex; justify-content:space-between; gap:12px; font-size:12px; margin:9px 0; }
+    .summary-line.grand { border-top:1px solid var(--line); padding-top:12px; margin-top:15px; font-weight:700; font-size:15px; }
+    .payment-mark { background:#2c2c30; color:var(--silver); border:1px solid #49494c; width:38px; height:38px; display:grid; place-items:center; font-family:Georgia,serif; font-size:22px; }
+    .payment-row { display:flex; gap:12px; align-items:center; }
+    .empty { text-align:center; padding:48px 12px; color:var(--muted); }
+    .empty h3 { color:var(--ink); font:25px Georgia,serif; }
+    .empty .button { margin-top:12px; }
+    .preview-footer { text-align:center; font-size:10px; color:var(--muted); margin-top:16px; }
+    .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#242427; color:var(--ink); border:1px solid #626265; padding:14px 20px; border-radius:6px; box-shadow:0 6px 24px #0008; z-index:5; max-width:calc(100% - 32px); width:max-content; font-size:12px; }
+    .toast button { color:var(--silver); background:transparent; border:0; text-decoration:underline; margin-left:12px; min-height:30px; }
+    dialog { width:min(390px,calc(100% - 32px)); background:var(--surface); color:var(--ink); border:1px solid #626265; padding:24px; border-radius:12px; }
+    dialog::backdrop { background:#000b; }
+    dialog h2 { font-size:28px; margin-bottom:14px; }
+    dialog p { color:var(--muted); font-size:13px; }
+    dialog .button { width:100%; margin-top:18px; }
+    .address-option { display:flex; gap:12px; align-items:start; padding:15px 0; border-bottom:1px solid var(--line); }
+    .address-option input { margin-top:4px; }
+    @media(max-width:760px) { .workspace { grid-template-columns:1fr; gap:24px; padding:24px 16px; } .intro { position:static; } .intro h1 { font-size:38px; margin:12px 0; } .intro p { max-width:none; } .screen-picker { grid-template-columns:1fr 1fr; margin:18px 0; gap:6px; } .screen-picker button { padding:10px; gap:8px; font-size:12px; } .note { display:none; } .phone-wrap { width:100%; max-width:390px; justify-self:center; } }
+    @media(prefers-reduced-motion:no-preference) { button { transition:background-color .15s,color .15s; } }
+  </style>
+</head>
+<body>
+  <svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" aria-hidden="true" style="position:absolute">
+    <defs>
+      <symbol id="art-tee" viewBox="0 0 160 180"><path d="M51 26 25 44 9 77l29 14 10-19v91h65V72l10 19 28-14-16-33-26-18c-8 11-49 11-58 0Z" fill="#30302e" stroke="#171715" stroke-width="2"/><path d="M61 29c3 18 34 18 38 0" fill="none" stroke="#71716b" stroke-width="3"/><path d="M50 150h60" stroke="#54544e"/><path d="m72 77 8-10 8 10-8 22Z" fill="#b5b5ac"/><path d="M65 80h30" stroke="#b5b5ac" stroke-width="3"/></symbol>
+      <symbol id="art-ring" viewBox="0 0 160 180"><ellipse cx="80" cy="153" rx="48" ry="8" fill="#000" opacity=".4"/><ellipse cx="80" cy="95" rx="48" ry="53" fill="none" stroke="#777972" stroke-width="20"/><ellipse cx="80" cy="93" rx="48" ry="53" fill="none" stroke="#c0c3b9" stroke-width="13"/><path d="M42 62c7-15 18-22 34-23M116 116c-5 12-13 20-25 24" fill="none" stroke="#f5f5ef" stroke-width="4"/><path d="m75 40 5-10 5 10 10 5-10 5-5 10-5-10-10-5Z" fill="#8b8e85" stroke="#e3e4db" stroke-width="2"/></symbol>
+      <symbol id="art-cap" viewBox="0 0 160 180"><ellipse cx="80" cy="146" rx="62" ry="8" fill="#000" opacity=".4"/><path d="M30 104c0-70 96-71 101 0Z" fill="#363632" stroke="#22221f" stroke-width="2"/><path d="M30 103c28-10 73-6 101 0l20 25c-35 14-96 9-135-2Z" fill="#252522" stroke="#171714" stroke-width="2"/><path d="M80 52v47" fill="none" stroke="#55554e"/><path d="m72 78 8-10 8 10-8 13Z" fill="#b5b5ac"/></symbol>
+      <symbol id="i-bag" viewBox="0 0 24 24"><path d="M5 7h14l1 14H4L5 7Z"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/></symbol>
+      <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8M5 10v11h14V10M9 21v-7h6v7"/></symbol>
+      <symbol id="i-grid" viewBox="0 0 24 24"><path d="M3 3h7v7H3ZM14 3h7v7h-7ZM3 14h7v7H3ZM14 14h7v7h-7Z"/></symbol>
+      <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M4 22v-3a8 8 0 0 1 16 0v3"/></symbol>
+      <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 9c0 6-8 13-8 13S4 15 4 9a8 8 0 1 1 16 0Z"/><circle cx="12" cy="9" r="2.5"/></symbol>
+      <symbol id="i-back" viewBox="0 0 24 24"><path d="m14 5-7 7 7 7M7 12h14"/></symbol>
+    </defs>
+  </svg>
+  <main class="workspace">
+    <aside class="intro">
+      <div class="eyebrow">School ecommerce · Dark edition / 02</div>
+      <h1>Dark by design.<br>Silver in detail.</h1>
+      <p>Proposed Home, Product Details, Cart, and Checkout. Choose a screen or follow the shopping actions inside the phone.</p>
+      <nav class="screen-picker" aria-label="Preview screens">
+        <button type="button" data-screen="home" aria-pressed="true"><span>01</span> Home</button>
+        <button type="button" data-screen="detail" aria-pressed="false"><span>02</span> Product Details</button>
+        <button type="button" data-screen="cart" aria-pressed="false"><span>03</span> Cart</button>
+        <button type="button" data-screen="checkout" aria-pressed="false"><span>04</span> Checkout</button>
+      </nav>
+      <div class="note"><strong>Planning preview</strong><p>All names, prices, stock, and addresses are sample data. The shop label and PHP 150 shipping fee are provisional. Changes reset on reload.</p><p>No Supabase connection, Xendit invoice, or real payment. The Flutter app has not been changed.</p></div>
+    </aside>
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="status-bar" aria-hidden="true"><span>9:41</span><span>● ● ● &nbsp; ▰</span></div>
+        <section id="screen-home" class="screen" aria-label="Home preview">
+          <header class="app-header"><div class="brand">CH / COLLECTION<small>Objects. Apparel. Everyday.</small></div><button class="icon-button" type="button" data-screen="cart" aria-label="Open cart"><svg class="icon"><use href="#i-bag"/></svg><span class="badge" data-cart-count>2</span></button></header>
+          <div class="content">
+            <label for="search" class="eyebrow" style="display:block;margin-bottom:8px">Find your next piece</label>
+            <input id="search" class="search" type="search" placeholder="Search the collection" autocomplete="off">
+            <div class="hero"><div class="eyebrow">The collection / 01</div><h2>Details that<br>stay with you.</h2><button class="text-action" id="browse" type="button">Browse collection ↗</button><svg class="hero-decoration" aria-hidden="true"><use href="#art-ring"/></svg></div>
+            <div class="chips" aria-label="Product categories"><button class="chip" data-category="All" aria-pressed="true">All</button><button class="chip" data-category="Clothing" aria-pressed="false">Clothing</button><button class="chip" data-category="Jewelry" aria-pressed="false">Jewelry</button><button class="chip" data-category="Accessories" aria-pressed="false">Accessories</button></div>
+            <div class="section-title"><h2>The edit</h2><span class="subtle" id="result-count">3 pieces</span></div>
+            <div class="grid" id="product-grid"></div>
+            <div id="no-results" class="empty" hidden><h3>No pieces found.</h3><p>Try another search or category.</p><button class="button secondary" id="clear-filters" type="button">Clear filters</button></div>
+          </div>
+          <nav class="bottom-nav" aria-label="Customer navigation"><button class="active" type="button" data-screen="home"><svg class="icon"><use href="#i-home"/></svg>Home</button><button type="button" id="categories-nav"><svg class="icon"><use href="#i-grid"/></svg>Categories</button><button type="button" data-screen="cart"><svg class="icon"><use href="#i-bag"/></svg>Cart</button><button type="button" id="account-nav"><svg class="icon"><use href="#i-user"/></svg>Account</button></nav>
+        </section>
+        <section id="screen-detail" class="screen" aria-label="Product details preview" hidden>
+          <header class="app-header"><button class="icon-button" data-screen="home" type="button" aria-label="Back to home"><svg class="icon"><use href="#i-back"/></svg></button><span class="eyebrow">The details</span><button class="icon-button" data-screen="cart" type="button" aria-label="Open cart"><svg class="icon"><use href="#i-bag"/></svg><span class="badge" data-cart-count>2</span></button></header>
+          <div class="detail-art"><svg aria-hidden="true"><use id="detail-art" href="#art-tee"/></svg><span class="image-count">Image placeholder</span></div>
+          <div class="content">
+            <div class="detail-heading"><div><span class="eyebrow" id="detail-category">Clothing</span><h2 id="detail-name">Archive Tee</h2></div><div class="detail-price" id="detail-price">₱12,000</div></div>
+            <div class="field-label"><strong>Choose size</strong><span class="subtle" id="size-hint">Required</span></div><div class="sizes" id="size-options"></div>
+            <div class="field-label"><strong>Quantity</strong><span class="subtle" id="stock-label">Choose a size for availability</span></div>
+            <div class="stepper"><button type="button" id="detail-minus" aria-label="Decrease quantity">−</button><output id="detail-quantity" aria-live="polite">1</output><button type="button" id="detail-plus" aria-label="Increase quantity">+</button></div>
+            <div class="description"><h3>About this piece</h3><p id="detail-description"></p><p>Sample catalog item for layout review. Final imagery and product information will be supplied later.</p></div>
+          </div>
+          <div class="action-bar"><button class="button secondary" type="button" id="add-to-cart">Add to Cart</button><button class="button" type="button" id="buy-now">Buy Now</button></div>
+        </section>
+        <section id="screen-cart" class="screen" aria-label="Cart preview" hidden>
+          <header class="app-header"><button class="icon-button" data-screen="home" type="button" aria-label="Continue shopping"><svg class="icon"><use href="#i-back"/></svg></button><h2>Your cart</h2><span class="subtle" id="cart-lines">2 items</span></header>
+          <div class="content"><label class="cart-select" id="select-all-label"><input type="checkbox" id="select-all" checked><span>Select all items</span></label><div id="cart-items"></div><div class="shipping-note"><svg class="icon" aria-hidden="true"><use href="#i-bag"/></svg><span>Choose the pieces you want to order. Shipping is added at checkout.</span></div></div>
+          <div class="action-bar"><div class="total"><small>Selected subtotal</small><strong id="cart-subtotal">₱30,000</strong></div><button class="button" type="button" id="cart-checkout">Checkout (2)</button></div>
+        </section>
+        <section id="screen-checkout" class="screen" aria-label="Checkout preview" hidden>
+          <header class="app-header"><button class="icon-button" id="checkout-back" type="button" aria-label="Back from checkout"><svg class="icon"><use href="#i-back"/></svg></button><h2>Checkout</h2><span class="eyebrow">Review</span></header>
+          <div class="content checkout-content">
+            <div class="panel"><div class="panel-heading"><h3>Delivery address</h3><button class="text-action" type="button" id="change-address">Change</button></div><div class="address-line"><svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg><div><div class="address-name" id="address-name"></div><div class="address-text" id="address-phone"></div><div class="address-text" id="address-full"></div></div></div></div>
+            <div class="panel"><h3>Your pieces</h3><div id="checkout-items"></div></div>
+            <div class="panel"><div class="panel-heading"><h3>Delivery</h3><span class="subtle">₱150</span></div><p class="subtle">Standard delivery · Sample flat rate</p></div>
+            <div class="panel"><h3>Payment</h3><div class="payment-row"><span class="payment-mark" aria-hidden="true">x</span><div><strong style="font-size:12px">Continue with Xendit</strong><div class="subtle">Choose a method on the payment page</div></div></div></div>
+            <div class="panel"><h3>Order summary</h3><div class="summary-line"><span>Subtotal</span><span id="checkout-subtotal"></span></div><div class="summary-line"><span>Shipping</span><span id="checkout-shipping"></span></div><div class="summary-line grand"><span>Total</span><span id="checkout-grand"></span></div></div>
+            <p class="subtle" style="font-size:10px;text-align:center">Planning preview · Sample order · No real transaction</p>
+          </div>
+          <div class="action-bar"><div class="total"><small>Total to pay</small><strong id="checkout-total"></strong></div><button class="button" type="button" id="pay-now">Pay Now ↗</button></div>
+        </section>
+      </div>
+      <p class="preview-footer">Dark theme · Interactive layout proposal · Sample data · Reload to reset</p>
+    </div>
+  </main>
+  <dialog id="address-dialog" aria-labelledby="address-title"><h2 id="address-title">Choose an address</h2><p>Fictional saved addresses for this preview.</p><div id="address-options"></div><form method="dialog"><button class="button" type="submit" value="save">Use selected address</button></form></dialog>
+  <dialog id="info-dialog" aria-labelledby="info-title"><h2 id="info-title"></h2><p id="info-body"></p><form method="dialog"><button class="button" type="submit">Back to preview</button></form></dialog>
+  <div class="toast" id="toast" role="status" hidden><span id="toast-message"></span><button type="button" data-screen="cart" id="toast-cart" hidden>View Cart</button></div>
+  <script>
+    'use strict';
+    // Offline design data only. Production checkout must use trusted backend totals.
+    const products = [
+      { id:'tee', name:'Archive Tee', category:'Clothing', price:12000, art:'art-tee', sizes:{ S:4, M:6, L:3, XL:0 }, description:'A relaxed cotton tee with a monochrome finish. Sample clothing item to demonstrate size selection.' },
+      { id:'ring', name:'Silver Band', category:'Jewelry', price:18000, art:'art-ring', sizes:{ 'US 8':3, 'US 9':2, 'US 10':0 }, description:'A sculptural silver-tone band. Sample jewelry item to demonstrate ring-size variants.' },
+      { id:'cap', name:'Everyday Cap', category:'Accessories', price:8500, art:'art-cap', sizes:{ 'One size':5 }, description:'An adjustable cap in a dark neutral finish. Sample accessory with a single sellable option.' }
+    ];
+    const addresses = [
+      { name:'Demo Customer', phone:'09XX XXX XXXX', full:'Unit 4, Sample Building, Demo Street, Barangay Sample, Quezon City, Metro Manila 1100' },
+      { name:'Demo Recipient', phone:'09XX XXX XXXX', full:'House 8, Example Street, Barangay Example, Makati City, Metro Manila 1200' }
+    ];
+    const shipping = 150;
+    const cart = [ { id:'tee', size:'M', qty:1, selected:true }, { id:'ring', size:'US 8', qty:1, selected:true } ];
+    let currentProduct = products[0], chosenSize = null, detailQuantity = 1;
+    let category = 'All', checkoutSource = 'cart', checkoutItems = [], chosenAddress = 0, toastTimer;
+    const $ = id => document.getElementById(id);
+    const money = amount => '₱' + amount.toLocaleString('en-PH');
+    const productFor = id => products.find(product => product.id === id);
+    const subtotal = items => items.reduce((sum,item) => sum + productFor(item.id).price * item.qty,0);
+    const artwork = product => `<svg aria-hidden="true"><use href="#${product.art}"/></svg>`;
+
+    function notify(message, viewCart = false) {
+      clearTimeout(toastTimer);
+      $('toast-message').textContent = message;
+      $('toast-cart').hidden = !viewCart;
+      $('toast').hidden = false;
+      toastTimer = setTimeout(() => { $('toast').hidden = true; },4000);
+    }
+    function showInfo(title,body) {
+      $('info-title').textContent = title;
+      $('info-body').textContent = body;
+      $('info-dialog').showModal();
+    }
+    function showScreen(name, moveFocus = true, preparedCheckout = false) {
+      if (name === 'checkout') {
+        if (!preparedCheckout) {
+          checkoutSource = 'cart';
+          checkoutItems = cart.filter(item => item.selected).map(item => ({...item}));
+        }
+        renderCheckout();
+      }
+      if (name === 'detail') renderDetail();
+      if (name === 'cart') renderCart();
+      document.querySelectorAll('.screen').forEach(screen => { screen.hidden = screen.id !== 'screen-' + name; });
+      document.querySelectorAll('.screen-picker button').forEach(button => button.setAttribute('aria-pressed',String(button.dataset.screen === name)));
+      $('toast').hidden = true;
+      if (moveFocus) {
+        const screen = $('screen-' + name);
+        screen.setAttribute('tabindex','-1');
+        screen.focus({preventScroll:true});
+        if (window.matchMedia('(max-width:760px)').matches) document.querySelector('.phone').scrollIntoView({block:'start',behavior:'instant'});
+      }
+    }
+    function openCheckout(items,source) {
+      checkoutItems = items.map(item => ({...item}));
+      checkoutSource = source;
+      showScreen('checkout',true,true);
+    }
+    function renderHome() {
+      const query = $('search').value.trim().toLowerCase();
+      const filtered = products.filter(product => (category === 'All' || product.category === category) && (product.name + ' ' + product.category).toLowerCase().includes(query));
+      $('product-grid').innerHTML = filtered.map(product => `<button type="button" class="product-card" data-product="${product.id}" aria-label="View ${product.name}"><span class="product-art">${artwork(product)}</span><span class="eyebrow">${product.category}</span><span class="product-name">${product.name}</span><span class="price">${money(product.price)}</span></button>`).join('');
+      $('result-count').textContent = `${filtered.length} ${filtered.length === 1 ? 'piece' : 'pieces'}`;
+      $('no-results').hidden = filtered.length !== 0;
+      document.querySelectorAll('[data-category]').forEach(button => button.setAttribute('aria-pressed',String(button.dataset.category === category)));
+    }
+    function updateBadge() {
+      const count = cart.reduce((sum,item) => sum + item.qty,0);
+      document.querySelectorAll('[data-cart-count]').forEach(badge => { badge.textContent = count; });
+    }
+    function renderDetail() {
+      $('detail-art').setAttribute('href','#' + currentProduct.art);
+      $('detail-name').textContent = currentProduct.name;
+      $('detail-category').textContent = currentProduct.category;
+      $('detail-price').textContent = money(currentProduct.price);
+      $('detail-description').textContent = currentProduct.description;
+      $('size-options').innerHTML = Object.entries(currentProduct.sizes).map(([size,stock]) => `<button type="button" class="size" data-size="${size}" aria-pressed="${chosenSize === size}" ${stock === 0 ? 'disabled aria-label="' + size + ', sold out"' : ''}>${size}</button>`).join('');
+      $('size-hint').textContent = chosenSize || 'Required';
+      $('stock-label').textContent = chosenSize ? `${currentProduct.sizes[chosenSize]} available` : 'Choose a size for availability';
+      $('detail-quantity').textContent = detailQuantity;
+      $('detail-minus').disabled = detailQuantity <= 1;
+      $('detail-plus').disabled = !chosenSize || detailQuantity >= currentProduct.sizes[chosenSize];
+    }
+    function renderCart() {
+      updateBadge();
+      $('cart-lines').textContent = `${cart.length} ${cart.length === 1 ? 'line' : 'lines'}`;
+      $('select-all-label').hidden = cart.length === 0;
+      $('select-all').checked = cart.length > 0 && cart.every(item => item.selected);
+      $('select-all').indeterminate = cart.some(item => item.selected) && !cart.every(item => item.selected);
+      $('cart-items').innerHTML = cart.length ? cart.map((item,index) => {
+        const product = productFor(item.id);
+        return `<div class="cart-row"><input type="checkbox" data-cart-select="${index}" aria-label="Select ${product.name}, ${item.size}" ${item.selected ? 'checked' : ''}><div class="thumb">${artwork(product)}</div><div><h3>${product.name}</h3><div class="subtle">Size: ${item.size}</div><div class="price">${money(product.price)}</div><div class="row-controls"><div class="stepper"><button type="button" data-cart-minus="${index}" aria-label="Decrease ${product.name} quantity" ${item.qty <= 1 ? 'disabled' : ''}>−</button><output>${item.qty}</output><button type="button" data-cart-plus="${index}" aria-label="Increase ${product.name} quantity" ${item.qty >= product.sizes[item.size] ? 'disabled' : ''}>+</button></div><button type="button" class="remove" data-cart-remove="${index}" aria-label="Remove ${product.name}, ${item.size}">Remove</button></div></div></div>`;
+      }).join('') : '<div class="empty"><h3>Your next piece awaits.</h3><p>Your cart is currently empty.</p><button type="button" class="button secondary" data-screen="home">Continue shopping</button></div>';
+      const selected = cart.filter(item => item.selected);
+      $('cart-subtotal').textContent = money(subtotal(selected));
+      $('cart-checkout').textContent = `Checkout (${selected.reduce((sum,item) => sum + item.qty,0)})`;
+      $('cart-checkout').disabled = selected.length === 0;
+    }
+    function renderCheckout() {
+      const address = addresses[chosenAddress];
+      $('address-name').textContent = address.name;
+      $('address-phone').textContent = address.phone;
+      $('address-full').textContent = address.full;
+      $('checkout-items').innerHTML = checkoutItems.length ? checkoutItems.map(item => {
+        const product = productFor(item.id);
+        return `<div class="order-item"><div class="thumb">${artwork(product)}</div><div><h3>${product.name}</h3><div class="subtle">Size: ${item.size} · Qty: ${item.qty}</div></div><strong class="item-price">${money(product.price * item.qty)}</strong></div>`;
+      }).join('') : '<p class="subtle">Choose an item from the cart or use Buy Now.</p>';
+      const itemTotal = subtotal(checkoutItems), fee = checkoutItems.length ? shipping : 0;
+      $('checkout-subtotal').textContent = money(itemTotal);
+      $('checkout-shipping').textContent = money(fee);
+      $('checkout-grand').textContent = money(itemTotal + fee);
+      $('checkout-total').textContent = money(itemTotal + fee);
+      $('pay-now').disabled = checkoutItems.length === 0;
+    }
+    document.addEventListener('click',event => {
+      const button = event.target.closest('button');
+      if (!button || button.disabled) return;
+      if (button.dataset.screen) showScreen(button.dataset.screen);
+      if (button.dataset.product) {
+        currentProduct = productFor(button.dataset.product); chosenSize = null; detailQuantity = 1;
+        showScreen('detail');
+      }
+      if (button.dataset.category) { category = button.dataset.category; renderHome(); }
+      if (button.dataset.size) { chosenSize = button.dataset.size; detailQuantity = 1; renderDetail(); }
+      for (const [attribute,change] of [['cartMinus',-1],['cartPlus',1]]) {
+        if (button.dataset[attribute] !== undefined) {
+          const item = cart[Number(button.dataset[attribute])];
+          item.qty = Math.max(1,Math.min(productFor(item.id).sizes[item.size],item.qty + change));
+          renderCart();
+        }
+      }
+      if (button.dataset.cartRemove !== undefined) { cart.splice(Number(button.dataset.cartRemove),1); renderCart(); }
+    });
+    $('search').addEventListener('input',renderHome);
+    $('clear-filters').addEventListener('click',() => { category = 'All'; $('search').value = ''; renderHome(); });
+    $('browse').addEventListener('click',() => { $('product-grid').scrollIntoView({block:'center',behavior:'instant'}); });
+    $('categories-nav').addEventListener('click',() => { document.querySelector('.chips').scrollIntoView({block:'center',behavior:'instant'}); document.querySelector('[data-category="All"]').focus({preventScroll:true}); });
+    $('account-nav').addEventListener('click',() => showInfo('Account screen','The planned Account screen will contain your profile, My Orders, My Addresses, and sign out. Authorized admins will also have a management entry. This screen is outside the first four layouts.'));
+    $('detail-minus').addEventListener('click',() => { detailQuantity = Math.max(1,detailQuantity - 1); renderDetail(); });
+    $('detail-plus').addEventListener('click',() => { if (chosenSize) detailQuantity = Math.min(currentProduct.sizes[chosenSize],detailQuantity + 1); renderDetail(); });
+    function validateSelection() {
+      if (!chosenSize) { notify('Choose an available size first.'); $('size-options').querySelector('button:not(:disabled)').focus(); return false; }
+      return true;
+    }
+    $('add-to-cart').addEventListener('click',() => {
+      if (!validateSelection()) return;
+      const existing = cart.find(item => item.id === currentProduct.id && item.size === chosenSize);
+      if ((existing ? existing.qty : 0) + detailQuantity > currentProduct.sizes[chosenSize]) { notify('Your cart plus this quantity exceeds available stock.'); return; }
+      if (existing) existing.qty += detailQuantity;
+      else cart.push({id:currentProduct.id,size:chosenSize,qty:detailQuantity,selected:true});
+      updateBadge(); notify('Added to your cart.',true);
+    });
+    $('buy-now').addEventListener('click',() => { if (validateSelection()) openCheckout([{id:currentProduct.id,size:chosenSize,qty:detailQuantity}],'buy-now'); });
+    $('cart-items').addEventListener('change',event => {
+      if (event.target.dataset.cartSelect !== undefined) { cart[Number(event.target.dataset.cartSelect)].selected = event.target.checked; renderCart(); }
+    });
+    $('select-all').addEventListener('change',event => { cart.forEach(item => { item.selected = event.target.checked; }); renderCart(); });
+    $('cart-checkout').addEventListener('click',() => { const selected = cart.filter(item => item.selected); if (selected.length) openCheckout(selected,'cart'); });
+    $('checkout-back').addEventListener('click',() => showScreen(checkoutSource === 'buy-now' ? 'detail' : 'cart'));
+    $('change-address').addEventListener('click',() => {
+      $('address-options').innerHTML = addresses.map((address,index) => `<label class="address-option"><input type="radio" name="address" value="${index}" ${chosenAddress === index ? 'checked' : ''}><span><strong>${address.name}</strong><br><span class="subtle">${address.phone}<br>${address.full}</span></span></label>`).join('');
+      $('address-dialog').returnValue = '';
+      $('address-dialog').showModal();
+    });
+    $('address-dialog').addEventListener('close',() => {
+      if ($('address-dialog').returnValue === 'save') {
+        chosenAddress = Number($('address-options').querySelector('input:checked').value);
+        renderCheckout();
+      }
+    });
+    $('pay-now').addEventListener('click',() => showInfo('Payment handoff','In the Flutter app, this action will request a backend-validated Xendit test payment and open its hosted page. Only a verified payment update will mark the order paid. This preview creates no invoice or order.'));
+    renderHome(); renderDetail(); renderCart(); renderCheckout();
+    showScreen('home',false);
+  </script>
+</body>
+</html>

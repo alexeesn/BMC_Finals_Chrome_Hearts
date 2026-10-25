@@ -23,6 +23,7 @@ The user's latest instructions take priority. Distinguish confirmed requirements
 
 - School ecommerce project using Flutter, Supabase, and Xendit.
 - Chrome Hearts is the product catalog concept.
+- The user selected a dark theme: black/charcoal surfaces, silver accents, light readable text, and a Gothic-inspired visual direction.
 - Required: working Add to Cart, Buy Now, delivery addresses, checkout, and an admin panel.
 - Communicate in clear, friendly Taglish unless requested otherwise.
 - Explain choices simply and keep the presentation/demo in mind.
