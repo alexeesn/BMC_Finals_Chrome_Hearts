@@ -18,6 +18,7 @@ Build a functional school ecommerce app with a Chrome Hearts product catalog, us
 | Shopping | Working Add to Cart and Buy Now |
 | Delivery details | Saved customer addresses and checkout |
 | Administration | Include an admin panel |
+| Setup documentation | Step-by-step Supabase setup and Xendit-to-Supabase connection guide with implementation files |
 | Codebase | User's own local project; Flutter app is in `ecommerce/` |
 | Git workflow | User handles commits and pushes |
 
@@ -62,7 +63,7 @@ These artifacts use fictional data for review; the Flutter app has not been impl
 - Address fields: recipient name, phone, province, city/municipality, barangay, street/building/unit, postal code, optional delivery instructions, and default flag.
 - Validate address ownership and required fields. Save a delivery-address snapshot on each order.
 - Decide structured geographical dropdowns versus validated text fields during screen planning.
-- Define when purchased cart items are removed as part of the checkout/payment policy.
+- The backend removes matching source cart rows only after confirmed payment and only if their variant/quantity/revision still match the checkout snapshot. Newer edits are preserved; Buy Now leaves the cart intact.
 
 ## Admin screens
 
@@ -95,24 +96,27 @@ Admin access must be provisioned through a trusted process and enforced on the b
 - Order items: immutable purchased item/variant/price snapshots.
 - Payments: order link, Xendit reference, amount/currency, and state.
 
-Finalize constraints, ownership policies, role provisioning, and inventory strategy before migrations. Supabase Auth manages credentials; do not create a separate password table.
+Detailed proposal: [Database and permissions plan](docs/DATABASE_PLAN.md), including trusted roles, shop settings, inventory reservations, and a webhook inbox.
+Setup walkthrough: [Supabase + Xendit guide](docs/SUPABASE_XENDIT_SETUP.md). Local SQL migrations, seed, four Edge handlers, dashboard bundler, owner setup scripts, and tests are now available under `supabase/` and `scripts/`. They have not been deployed to the user's accounts. See [backend package](supabase/README.md) and [API/recovery guide](docs/BACKEND_API.md).
+
+The supplied migrations implement constraints, ownership policies, trusted role provisioning, and the initial reservation strategy. Supabase Auth manages credentials; there is no separate password table. Runtime deployment remains pending.
 
 ### Checkout/payment flow
 
 1. Authenticate customer and validate address ownership.
 2. Backend validates active products/variants, quantities, current prices, and stock.
 3. Calculate totals and create or reuse a pending order safely.
-4. Create a Xendit test invoice/payment associated with that order.
+4. Create a Xendit hosted test payment associated with that order, using the selected API.
 5. Flutter opens the hosted payment URL.
 6. Webhook validates its token, payment reference, expected amount/currency, and relevant status.
 7. Apply the payment transition once and follow the agreed stock policy.
 8. Flutter fetches the current order state; navigation alone is not payment confirmation.
 
-The class function names are `create-invoice` and `xendit-webhook`. They can be retained if the final integration uses that workflow; verify current provider support during implementation.
+The local implementation uses test Payment Sessions through `create-payment` and `xendit-webhook`, plus `reconcile-payments` and a read-only `payment-return` page. Test-account access remains to be verified. There is no implemented legacy invoice fallback; the instructor's `create-invoice` remains reference material.
 
-Candidate payment states: Pending, Paid, Expired, Failed. Keep fulfillment separate: Preparing, Shipped, Delivered after payment confirmation. Confirm exact provider mappings and transitions when implementing.
+Implemented order payment states: Pending, Paid, Expired, Cancelled, Needs Review. Provider creation has separate Reserved/Creating/Active/Unknown/Creation Failed states. An individual failed payment attempt does not automatically terminate an otherwise active session. Fulfillment remains separate: Unfulfilled, Preparing, Shipped, Delivered.
 
-Handle closed payment pages, interrupted requests/retries, pending/expired payments, repeated callbacks, and concurrent checkout attempts. Decide stock reservation, release, and cancellation eligibility before adding related controls.
+The backend handles interrupted retries, duplicate callbacks, concurrent inventory reservations, and safe payment/expiry reconciliation. Closing a payment page leaves the order pending. Refund and customer cancellation controls remain outside the initial package.
 
 ## Milestones
 

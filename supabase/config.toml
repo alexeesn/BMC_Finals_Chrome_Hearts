@@ -1,0 +1,13 @@
+project_id = "bmc-school-ecommerce"
+
+[functions.create-payment]
+verify_jwt = true
+
+[functions.xendit-webhook]
+verify_jwt = false
+
+[functions.reconcile-payments]
+verify_jwt = false
+
+[functions.payment-return]
+verify_jwt = false

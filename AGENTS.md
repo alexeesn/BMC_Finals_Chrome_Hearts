@@ -6,7 +6,7 @@ At the start of a work session, read:
 
 1. `PROJECT_STATUS.md` for progress, verification, open decisions, and the next step.
 2. `PROJECT_PLAN.md` for requirements, proposed screens, architecture, and milestones.
-3. `docs/CLASS_REFERENCE.md` when working on the class payment/backend integration.
+3. `docs/DATABASE_PLAN.md` and `docs/SUPABASE_XENDIT_SETUP.md` when working on the backend/setup. `docs/CLASS_REFERENCE.md` preserves the instructor's integration reference.
 
 The user's latest instructions take priority. Distinguish confirmed requirements, proposals, and implemented behavior. These documents preserve project context, not the full conversation transcript.
 
@@ -25,6 +25,8 @@ The user's latest instructions take priority. Distinguish confirmed requirements
 - Chrome Hearts is the product catalog concept.
 - The user selected a dark theme: black/charcoal surfaces, silver accents, light readable text, and a Gothic-inspired visual direction.
 - Required: working Add to Cart, Buy Now, delivery addresses, checkout, and an admin panel.
+- The user also requires step-by-step Supabase setup and Xendit connection instructions. Maintain the setup guide alongside actual SQL/function files, including dashboard steps, prerequisites, checkpoints, and troubleshooting. Clearly label planned files that do not exist yet.
+- Preferred deployment workflow: copy/paste through the Supabase dashboard, following the class handout's workflow. Explain that local SQL/TypeScript files are source copies, not extra hosting services: SQL goes in SQL Editor, bundled TypeScript goes in Edge Functions, and the deployed webhook URL goes in Xendit. Guide the user through one dashboard stage at a time.
 - Communicate in clear, friendly Taglish unless requested otherwise.
 - Explain choices simply and keep the presentation/demo in mind.
 - Follow the current phase in `PROJECT_STATUS.md`. Do not treat a planned milestone as authorization to implement the entire app.
@@ -35,6 +37,7 @@ The user's latest instructions take priority. Distinguish confirmed requirements
 ## Implementation rules for later phases
 
 - Use Xendit Test Mode for the school demo unless the user changes that scope.
+- Current research distinguishes Payment Sessions from the class's legacy invoice API. The user authorized local backend preparation and the package implements test Payment Sessions. Confirm account access before deployment/claiming a working connection, and use matching fields/events throughout. Do not assume the two APIs are interchangeable.
 - Keep Xendit secrets, webhook verification tokens, and privileged Supabase keys on the backend. Never embed them in Flutter, commit them, or print their values.
 - Flutter may use the intended Supabase public/client key and project URL. Protect private data with authentication and Row Level Security.
 - Enforce admin permissions on the backend. Customer signup and profile updates must not allow customers to grant themselves admin privileges.

@@ -8,6 +8,8 @@ The instructor's repository is not a project dependency. Do not clone it, replac
 
 The pasted guide omitted actual SQL, Edge Function bodies, and some screenshots/Android snippets. Those sections have not been reviewed as code or installed.
 
+For our current project walkthrough, read [Supabase + Xendit setup](SUPABASE_XENDIT_SETUP.md) and [database plan](DATABASE_PLAN.md). Current Xendit documentation distinguishes Payment Sessions from the handout's legacy invoice flow; our local package implements test Payment Sessions through `create-payment`, with account access still to be verified. The class names below describe the supplied handout. The user prefers the same dashboard copy/paste workflow; local TypeScript files are simply the source of the code pasted into Edge Functions.
+
 ## Supabase setup described in the handout
 
 - Create or sign into an account at https://supabase.com.

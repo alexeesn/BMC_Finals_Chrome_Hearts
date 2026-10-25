@@ -1,0 +1,268 @@
+// Dependency-free Edge handlers. Inject env/fetch so payment logic can be tested locally.
+export type Bindings = { env: (name: string) => string | undefined; fetch: typeof fetch };
+export type Json = Record<string, any>;
+export class HttpError extends Error {
+  status: number;
+  constructor(status: number, message: string) { super(message); this.status = status; }
+}
+export function uuid(value: unknown): string {
+  if (typeof value !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) throw new HttpError(400, 'A valid ID is required');
+  return value;
+}
+export function resourceId(value: unknown, prefix = 'ps'): string {
+  if (typeof value !== 'string' || !new RegExp('^' + prefix + '-[a-zA-Z0-9-]{20,80}$').test(value)) throw new HttpError(400, 'Invalid provider resource ID');
+  return value;
+}
+export function minorAmount(value: unknown): number {
+  if (typeof value !== 'number' && typeof value !== 'string') throw new HttpError(502, 'Invalid provider amount');
+  const match = String(value).match(/^(\d{1,11})(?:\.(\d{1,2}))?$/);
+  if (!match) throw new HttpError(502, 'Invalid provider amount precision');
+  const result = Number(BigInt(match[1]) * 100n + BigInt((match[2] || '').padEnd(2, '0')));
+  if (!Number.isSafeInteger(result) || result > 9000000000000) throw new HttpError(502, 'Invalid provider amount range');
+  return result;
+}
+export function hostedUrl(value: unknown): string {
+  if (typeof value !== 'string') throw new HttpError(502, 'Missing hosted test URL');
+  const url = new URL(value);
+  if (url.protocol !== 'https:' || url.username || url.password || url.port || !['dev.xen.to', 'checkout-staging.xendit.co'].includes(url.hostname)) throw new HttpError(502, 'Unexpected hosted test URL');
+  return url.href;
+}
+export async function equalToken(actual: string, expected: string): Promise<boolean> {
+  if (!actual || !expected || actual.length > 1024) return false;
+  const encode = new TextEncoder();
+  const a = new Uint8Array(await crypto.subtle.digest('SHA-256', encode.encode(actual)));
+  const b = new Uint8Array(await crypto.subtle.digest('SHA-256', encode.encode(expected)));
+  let different = 0;
+  for (let index = 0; index < a.length; index++) different |= a[index] ^ b[index];
+  return different === 0;
+}
+export async function readJson(request: Request): Promise<Json> {
+  if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json')) throw new HttpError(415, 'Use application/json');
+  const reader = request.body?.getReader();
+  if (!reader) throw new HttpError(400, 'JSON body required');
+  const chunks: Uint8Array[] = []; let length = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    length += value.byteLength;
+    if (length > 65536) { await reader.cancel(); throw new HttpError(413, 'Request body too large'); }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(length); let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
+  try {
+    const body = JSON.parse(new TextDecoder().decode(bytes));
+    if (!body || typeof body !== 'object' || Array.isArray(body)) throw new Error();
+    return body;
+  } catch { throw new HttpError(400, 'Invalid JSON object'); }
+}
+function envKey(bindings: Bindings, collection: string, legacy: string): string {
+  const raw = bindings.env(collection);
+  if (raw) { try { const keys = JSON.parse(raw); if (typeof keys.default === 'string') return keys.default; } catch { /* fail below */ } }
+  const fallback = bindings.env(legacy);
+  if (!fallback) throw new HttpError(503, 'Backend credentials are not configured');
+  return fallback;
+}
+export class Backend {
+  bindings: Bindings; url: string;
+  constructor(bindings: Bindings) {
+    this.bindings = bindings;
+    const url = bindings.env('SUPABASE_URL');
+    if (!url || !url.startsWith('https://')) throw new HttpError(503, 'Backend URL is not configured');
+    this.url = url.replace(/\/$/, '');
+  }
+  testKey(): string {
+    const key = this.bindings.env('XENDIT_SECRET_KEY') || '';
+    if (!/^xnd_development_/.test(key)) throw new HttpError(503, 'Configure a Xendit Test Mode key');
+    return key;
+  }
+  async user(request: Request): Promise<string> {
+    const authorization = request.headers.get('authorization') || '';
+    if (!/^Bearer [A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/i.test(authorization)) throw new HttpError(401, 'Sign in to checkout');
+    const publicKey = envKey(this.bindings, 'SUPABASE_PUBLISHABLE_KEYS', 'SUPABASE_ANON_KEY');
+    const response = await this.bindings.fetch(this.url + '/auth/v1/user', { headers: { apikey: publicKey, authorization }, signal: AbortSignal.timeout(10000), redirect: 'error' });
+    if (response.status >= 500) throw new HttpError(503, 'Authentication service unavailable');
+    if (!response.ok) throw new HttpError(401, 'Your session expired. Sign in again');
+    const user = await response.json();
+    return uuid(user.id);
+  }
+  async rpc(name: string, body: Json = {}): Promise<any> {
+    const key = envKey(this.bindings, 'SUPABASE_SECRET_KEYS', 'SUPABASE_SERVICE_ROLE_KEY');
+    const headers: Record<string, string> = { apikey: key, 'content-type': 'application/json' };
+    if (!key.startsWith('sb_secret_')) headers.authorization = 'Bearer ' + key;
+    const response = await this.bindings.fetch(this.url + '/rest/v1/rpc/' + name, { method: 'POST', headers, body: JSON.stringify(body), redirect: 'error', signal: AbortSignal.timeout(15000) });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      if (error.code === '22023') throw new HttpError(400, String(error.message).slice(0, 180));
+      if (['22P02', '22003', '23514'].includes(error.code)) throw new HttpError(400, 'Invalid checkout values');
+      throw new HttpError(503, 'Database operation failed; retry with the same checkout key');
+    }
+    return response.status === 204 ? null : await response.json();
+  }
+  async xendit(path: string, body?: Json): Promise<Json> {
+    const response = await this.bindings.fetch('https://api.xendit.co' + path, {
+      method: body ? 'POST' : 'GET', headers: { authorization: 'Basic ' + btoa(this.testKey() + ':'), 'content-type': 'application/json', ...(path.startsWith('/v3/') ? { 'api-version': '2024-11-11' } : {}) },
+      body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(15000), redirect: 'error',
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const error = new HttpError(502, 'Xendit test request failed') as HttpError & { definitive?: boolean; providerCode?: string };
+      error.definitive = !!body && [400, 401, 403, 404, 422].includes(response.status);
+      error.providerCode = /^[A-Z0-9_]{1,80}$/.test(data.error_code) ? data.error_code : 'PROVIDER_REQUEST_FAILED';
+      throw error;
+    }
+    return data;
+  }
+}
+export function normalizeSession(session: Json, paymentSucceeded = false, verifiedPaymentId?: string): Json {
+  if (!session.reference_id || typeof session.reference_id !== 'string' || !session.business_id) throw new HttpError(502, 'Incomplete session response');
+  if (!['ACTIVE', 'COMPLETED', 'EXPIRED', 'CANCELED'].includes(session.status)) throw new HttpError(502, 'Unexpected session status');
+  if (!Number.isFinite(Date.parse(session.expires_at))) throw new HttpError(502, 'Invalid session expiry');
+  return { id: resourceId(session.payment_session_id), reference_id: session.reference_id, business_id: session.business_id,
+    session_type: session.session_type, mode: session.mode, capture_method: session.capture_method || 'AUTOMATIC',
+    currency: session.currency, country: session.country, amount_minor: minorAmount(session.amount), status: session.status,
+    expires_at: session.expires_at, url: session.payment_link_url ? hostedUrl(session.payment_link_url) : null,
+    payment_succeeded: paymentSucceeded, payment_id: verifiedPaymentId || null };
+}
+export async function verifiedSession(backend: Backend, id: string): Promise<Json> {
+  const session = await backend.xendit('/sessions/' + resourceId(id));
+  if (session.payment_session_id !== id) throw new HttpError(502, 'Session identity mismatch');
+  let paymentId = session.payment_id;
+  let requestData: Json | undefined;
+  const requestId = session.payment_request_id || session.latest_payment_request_id;
+  if (!paymentId && requestId && ['COMPLETED','EXPIRED','CANCELED'].includes(session.status)) {
+    requestData = await backend.xendit('/v3/payment_requests/' + resourceId(requestId, 'pr'));
+    if (requestData.payment_request_id !== requestId || requestData.business_id !== session.business_id || requestData.currency !== session.currency || minorAmount(requestData.request_amount) !== minorAmount(session.amount)) throw new HttpError(502, 'Payment request mismatch');
+    paymentId = requestData.latest_payment_id;
+  }
+  let succeeded = false;
+  let payment: Json | undefined;
+  if (paymentId) {
+    payment = await backend.xendit('/v3/payments/' + resourceId(paymentId, 'py'));
+    if (payment.payment_id !== paymentId || payment.business_id !== session.business_id || payment.currency !== session.currency || payment.type !== 'PAY' || payment.capture_method !== 'AUTOMATIC' || minorAmount(payment.request_amount) !== minorAmount(session.amount)
+      || (requestId ? payment.payment_request_id !== requestId : payment.reference_id !== session.reference_id)) throw new HttpError(502, 'Payment evidence mismatch');
+    const captured = Array.isArray(payment.captures) ? payment.captures.reduce((sum: number, capture: Json) => sum + minorAmount(capture.capture_amount), 0) : 0;
+    succeeded = payment.status === 'SUCCEEDED' && captured === minorAmount(session.amount);
+  }
+  const normalized = normalizeSession(session, succeeded, succeeded ? paymentId : undefined);
+  if (succeeded) normalized.status = 'COMPLETED';
+  else if (['EXPIRED','CANCELED'].includes(session.status)) {
+    const terminal = ['EXPIRED','CANCELED','FAILED'];
+    // Do not release a hold while an underlying asynchronous charge is still payable.
+    if ((payment && !terminal.includes(payment.status)) || (requestId && !payment && !terminal.includes(requestData?.status))) normalized.status = 'UNCERTAIN';
+  }
+  return normalized;
+}
+function cors(request: Request, bindings: Bindings): Record<string, string> {
+  const origin = request.headers.get('origin');
+  if (!origin) return {};
+  const allowed = (bindings.env('APP_ORIGINS') || '').split(',').map(value => value.trim()).filter(Boolean);
+  if (!allowed.includes(origin)) throw new HttpError(403, 'Browser origin is not configured');
+  return { 'access-control-allow-origin': origin, vary: 'Origin', 'access-control-allow-headers': 'authorization, apikey, content-type, x-client-info', 'access-control-allow-methods': 'POST, OPTIONS' };
+}
+export function safeCheckout(data: Json): Json {
+  return { order_id: data.order.id, order_number: data.order.order_number, payment_status: data.order.payment_status,
+    payment_state: data.payment.state, total_minor: data.order.total_minor, currency: data.order.currency,
+    expires_at: data.payment.expires_at, payment_url: data.payment.state === 'active' ? data.payment.payment_url : null };
+}
+export async function handleCreate(request: Request, bindings: Bindings): Promise<Response> {
+  let headers: Record<string, string> = {};
+  try {
+    headers = cors(request, bindings);
+    if (request.method === 'OPTIONS') return new Response(null, {status:204,headers});
+    if (request.method !== 'POST') throw new HttpError(405, 'POST required');
+    const backend = new Backend(bindings), user = await backend.user(request);
+    backend.testKey();
+    if (!bindings.env('XENDIT_WEBHOOK_TOKEN')) throw new HttpError(503, 'Configure the webhook token before checkout');
+    const body = await readJson(request);
+    if (!['cart','buy_now'].includes(body.source) || !Array.isArray(body.items) || body.items.length < 1 || body.items.length > 20) throw new HttpError(400, 'Choose checkout items');
+    if (body.source === 'buy_now' && body.items.length !== 1) throw new HttpError(400, 'Buy Now requires one variant');
+    const items = body.items.map((item: Json) => {
+      if (!item || typeof item !== 'object') throw new HttpError(400, 'Invalid item');
+      if (body.source === 'cart') return { cart_item_id: uuid(item.cart_item_id) };
+      if (!Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 99) throw new HttpError(400, 'Quantity must be between 1 and 99');
+      return { variant_id: uuid(item.variant_id), quantity: item.quantity };
+    });
+    const data = await backend.rpc('ecom_create_checkout', { p_user:user, p_address:uuid(body.address_id), p_items:items, p_source:body.source, p_key:uuid(body.idempotency_key) });
+    const claim = await backend.rpc('ecom_claim_creation', { p_order:data.order.id });
+    if (!claim.claimed) {
+      const safe = safeCheckout(claim.data);
+      return jsonResponse(safe, ['reserved','creating','unknown'].includes(claim.data.payment.state) ? 409 : 200, headers);
+    }
+    const owned = claim.data, payment = owned.payment;
+    try {
+      const returnBase = backend.url + '/functions/v1/payment-return';
+      // Only the claimed request creates a resource; a retry never silently extends its hold.
+      const result = await backend.xendit('/sessions', { reference_id:payment.reference_id, session_type:'PAY', mode:'PAYMENT_LINK', capture_method:'AUTOMATIC',
+        allow_save_payment_method:'DISABLED', country:'PH', currency:'PHP', amount:Number((payment.expected_amount_minor / 100).toFixed(2)),
+        expires_at:new Date(Date.parse(owned.order.expires_at)).toISOString(),
+        description:'School demo order ' + owned.order.order_number,
+        success_return_url:returnBase + '?result=success', cancel_return_url:returnBase + '?result=cancelled' });
+      const applied = await backend.rpc('ecom_apply_session', { p_session:normalizeSession(result) });
+      if (applied.review || applied.ignored) throw new HttpError(409, 'Payment requires review before continuing');
+      return jsonResponse(safeCheckout(applied.data), 200, headers);
+    } catch (error) {
+      const provider = error as HttpError & { definitive?: boolean; providerCode?: string };
+      await backend.rpc('ecom_creation_failed', { p_order:owned.order.id, p_claim:payment.claim_token, p_definitive:provider.definitive === true, p_code:provider.providerCode || 'CREATION_OUTCOME_UNKNOWN' });
+      throw error;
+    }
+  } catch (error) { return errorResponse(error, headers); }
+}
+export async function processSession(backend: Backend, id: string, eventId?: string): Promise<Json> {
+  const result = await backend.rpc('ecom_apply_session', {p_session:await verifiedSession(backend,id)});
+  if (eventId) await backend.rpc('ecom_finish_event', {p_event:eventId,p_state:result.ignored ? 'ignored' : result.review ? 'needs_review' : 'processed'});
+  return { ignored:!!result.ignored, review:!!result.review };
+}
+export async function handleWebhook(request: Request, bindings: Bindings): Promise<Response> {
+  try {
+    if (request.method !== 'POST') throw new HttpError(405, 'POST required');
+    if (!await equalToken(request.headers.get('x-callback-token') || '', bindings.env('XENDIT_WEBHOOK_TOKEN') || '')) throw new HttpError(401, 'Invalid webhook token');
+    const body = await readJson(request);
+    if (!['payment_session.completed','payment_session.expired'].includes(body.event)) return jsonResponse({ignored:true});
+    const id = resourceId(body.data?.payment_session_id);
+    const backend = new Backend(bindings); backend.testKey();
+    const event = await backend.rpc('ecom_record_event', {p_type:body.event,p_provider:id});
+    if (['processed','ignored','needs_review'].includes(event.state)) return jsonResponse({received:true,duplicate:true});
+    // Provider lookup is authoritative; callback body cannot choose the amount/status.
+    await processSession(backend,id,event.id);
+    return jsonResponse({received:true});
+  } catch (error) { return errorResponse(error); }
+}
+export async function handleReconcile(request: Request, bindings: Bindings): Promise<Response> {
+  try {
+    if (request.method !== 'POST') throw new HttpError(405, 'POST required');
+    if (!await equalToken(request.headers.get('x-reconcile-token') || '', bindings.env('RECONCILE_TOKEN') || '')) throw new HttpError(401, 'Invalid worker token');
+    const body = await readJson(request), backend = new Backend(bindings); backend.testKey();
+    const candidates = await backend.rpc('ecom_reconcile_candidates');
+    if (body.session_ids !== undefined && (!Array.isArray(body.session_ids) || body.session_ids.length > 20)) throw new HttpError(400, 'At most 20 recovery session IDs');
+    const manual = (body.session_ids || []).map((id: unknown) => resourceId(id));
+    const eventMap = new Map<string, string[]>([]);
+    for (const event of candidates.events) { const group = eventMap.get(event.provider_id) || []; group.push(event.id); eventMap.set(event.provider_id,group); }
+    // Include inbox work before polling so an orphaned creation response can be recovered.
+    const ids = [...new Set<string>([...manual,...[...eventMap.keys()].slice(0,10),...candidates.sessions])].slice(0,20);
+    let processed = 0, failed = 0;
+    const deadline = Date.now() + 45000;
+    for (const id of ids) {
+      if (Date.now() > deadline) break;
+      try {
+        const result = await processSession(backend,id);
+        for (const event of eventMap.get(id) || []) await backend.rpc('ecom_finish_event', {p_event:event,p_state:result.ignored ? 'ignored' : result.review ? 'needs_review' : 'processed'});
+        processed++;
+      } catch { failed++; }
+    }
+    return jsonResponse({processed,failed,unresolved:candidates.unresolved}, failed ? 503 : 200);
+  } catch (error) { return errorResponse(error); }
+}
+export function jsonResponse(data: unknown, status = 200, headers: Record<string,string> = {}): Response {
+  return new Response(JSON.stringify(data), { status, headers:{'content-type':'application/json','cache-control':'no-store',...headers} });
+}
+export function errorResponse(error: unknown, headers: Record<string,string> = {}): Response {
+  return jsonResponse({error:error instanceof HttpError ? error.message : 'Service unavailable; check order status before retrying',request_id:crypto.randomUUID()}, error instanceof HttpError ? error.status : 503, headers);
+}
+export function handleReturn(request: Request): Response {
+  if (request.method !== 'GET') return jsonResponse({error:'GET required'},405);
+  // Deliberately performs no database writes and never calls a payment successful.
+  const cancelled = new URL(request.url).searchParams.get('result') === 'cancelled';
+  const title = cancelled ? 'Checkout paused' : 'Return to your order';
+  return new Response('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + title + '</title><style>body{background:#101012;color:#f2f0eb;font:16px/1.7 system-ui;margin:64px 24px}main{max-width:440px;margin:auto;border:1px solid #444;padding:28px}h1{font:32px Georgia}p{color:#bbb}</style><main><h1>' + title + '</h1><p>Close this page and return to the shop. Your order will show its confirmed payment status after verification.</p><p>School project · Test payments</p></main></html>', {headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','content-security-policy':"default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'",'x-content-type-options':'nosniff'}});
+}
