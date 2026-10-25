@@ -4,7 +4,7 @@ Last updated: 2026-10-25 (Asia/Singapore).
 
 ## Current phase
 
-Step 2: screen map and layout proposal, following the user's request to proceed after project documentation. The user handles Git commits and pushes. Flutter implementation has not started.
+The user approved the current four-screen dark-theme design preview. Next milestone: Step 3, database/schema and permissions planning. The user handles Git commits and pushes. Flutter implementation has not started.
 
 ## Completed
 
@@ -16,6 +16,7 @@ Step 2: screen map and layout proposal, following the user's request to proceed 
 - Prepared `docs/SCREEN_PLAN.md` with the customer/admin navigation map, four detailed shopping screen layouts, authentication proposal, and loading/empty/error states.
 - Created `docs/previews/shopping-flow.html`, an offline interactive visual proposal for Home, Product Details, Cart, and Checkout. It uses fictional browser-memory data and makes no backend/payment calls.
 - Applied the user's dark-theme request throughout the preview: black/charcoal backgrounds, silver primary controls, light text, dark dialogs, and Gothic-inspired display typography. Dark theme is now a confirmed design requirement.
+- User accepted the updated dark-theme preview ("guds na") and asked for the next step. Use its four-screen layout as the implementation baseline, subject to later feedback; sample products, prices, addresses, shipping fee, and shop label remain placeholders.
 
 ## Observed codebase
 
@@ -30,7 +31,7 @@ No ecommerce app features or backend deployments have been implemented in this c
 
 ## Immediate next step
 
-Review the screen/layout proposal with the user using `docs/previews/shopping-flow.html` and incorporate feedback. Once the design direction is settled, prepare the database/schema and permissions plan, including stock/payment policies, before implementing app features.
+Prepare `docs/DATABASE_PLAN.md` with table relationships, ownership/permissions, admin provisioning, order/payment states, and inventory reservation/expiry/cancellation rules. Resolve relevant open decisions while planning. Prepare SQL migrations after the schema and policies are settled; no database has been created or deployed in this conversation.
 
 Keep the one-store Android app, shared customer/admin app, and fixed shipping fee as proposals until confirmed through discussion or an implementation request. The user has confirmed the dark-theme direction; the final font, shop name, and product imagery remain open.
 
@@ -39,7 +40,7 @@ Keep the one-store Android app, shared customer/admin app, and fixed shipping fe
 - Final app/shop display name.
 - Android-only delivery and whether the rubric requires a separate admin website.
 - Sample products, images, categories, and applicable variants.
-- Feedback on the four-screen visual proposal and navigation; `CH / COLLECTION` is only a preview label.
+- The four-screen dark layout is accepted; final branding and typography assets remain open. `CH / COLLECTION` is only a preview label.
 - Shipping fee and address-entry approach.
 - Stock reservation, payment expiry, cancellation, and purchased-cart-item removal behavior.
 - Any extra grading or presentation requirements.

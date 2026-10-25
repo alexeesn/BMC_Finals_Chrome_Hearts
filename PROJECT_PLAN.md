@@ -14,6 +14,7 @@ Build a functional school ecommerce app with a Chrome Hearts product catalog, us
 | Payment provider | Xendit |
 | Catalog concept | Chrome Hearts products |
 | Visual direction | Dark theme with black/charcoal surfaces, silver accents, and light text |
+| Layout baseline | User accepted the current Home, Product Details, Cart, and Checkout dark-theme preview |
 | Shopping | Working Add to Cart and Buy Now |
 | Delivery details | Saved customer addresses and checkout |
 | Administration | Include an admin panel |

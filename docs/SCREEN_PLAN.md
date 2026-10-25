@@ -1,6 +1,6 @@
 # Screen map and layout plan
 
-Status: proposed design for review. This document and the offline browser preview define the next implementation target; they do not mean these screens exist in Flutter yet.
+Status: the user accepted the four-screen dark-theme preview as the layout baseline. Behavioral details below remain implementation planning; these screens do not exist in Flutter yet. Sample products, prices, addresses, shipping fee, and branding are still placeholders.
 
 Preview: [Open the shopping flow](previews/shopping-flow.html). Open the HTML file in a browser; no server, account, or installation is needed. The preview uses fictional products, prices, stock, addresses, and a sample shipping fee. It has no persistence or payment connection.
 
@@ -133,4 +133,4 @@ The preview only switches between two fictional addresses to show the layout; an
 
 ## Next milestone
 
-Review this proposal with the user and incorporate design feedback. Then prepare the database/schema and permissions plan, including stock reservation/expiry/cancellation rules, before implementing Flutter features.
+The current dark layout is accepted. Prepare the database/schema and permissions plan, including stock reservation/expiry/cancellation rules, before implementing Flutter features. Incorporate any later user design feedback into this baseline.
