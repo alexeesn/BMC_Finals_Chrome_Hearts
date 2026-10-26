@@ -24,6 +24,7 @@ The user's latest instructions take priority. Distinguish confirmed requirements
 - School ecommerce project using Flutter, Supabase, and Xendit.
 - Chrome Hearts is the product catalog concept.
 - The user selected a dark theme: black/charcoal surfaces, silver accents, light readable text, and a Gothic-inspired visual direction.
+- Match the accepted `docs/previews/shopping-flow.html` structure when polishing the Flutter UI: Home/Categories/Cart/Account navigation, circular top-right cart/count, search before banner, category pills, flat product cards, and rectangular controls. Categories jumps to the category chips. Cart uses its back header and subtotal/action footer. Preserve the later-authorized automatic banner using the user's four photos; do not replace the reference layout with another navigation design.
 - Required: working Add to Cart, Buy Now, delivery addresses, checkout, and an admin panel.
 - The user also requires step-by-step Supabase setup and Xendit connection instructions. Maintain the setup guide alongside actual SQL/function files, including dashboard steps, prerequisites, checkpoints, and troubleshooting. Clearly label planned files that do not exist yet.
 - Preferred deployment workflow: copy/paste through the Supabase dashboard, following the class handout's workflow. Explain that local SQL/TypeScript files are source copies, not extra hosting services: SQL goes in SQL Editor, bundled TypeScript goes in Edge Functions, and the deployed webhook URL goes in Xendit. Guide the user through one dashboard stage at a time.

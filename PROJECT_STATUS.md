@@ -4,7 +4,7 @@ Last updated: 2026-10-26 (Asia/Singapore).
 
 ## Current phase
 
-The user authorized full customer UI polish before APK preparation, then requested using their four photos in asset/img as an automatic Shein-like banner. The five customer screens and shared theme/layout are updated; Collection now uses CollectionBanner with 5-second photo rotation, swipe/dots/arrows/pause, app/tab/route suspension, and reduced-motion support. Photos are registered in pubspec.yaml. A full user-terminal Flutter restart is needed to rebuild the asset bundle; see docs/UI_REVIEW.md. Actual browser rendering/autoplay still needs user verification. Earlier shopping/fulfillment checks are user-reported good; unpaid expiry was explicitly not yet checked. APK remains pending.
+The user rejected the Flutter layout's divergence from the accepted HTML, specifically bottom navigation and the top cart. Corrected the customer UI against docs/previews/shopping-flow.html: four Home/Categories/Cart/Account destinations, circular header cart/count, search → photo banner → horizontal category pills → The edit, flat product cards, rectangular controls, reference product/cart/checkout headers and total/action footers. Categories reveals the chip row; Cart has its full layout/back action, and system back returns to Home from main sections. The approved four-photo automatic banner remains. Source analysis passes; actual browser/navigation checks are pending user review. Unpaid expiry and APK remain pending.
 
 ## Completed
 
@@ -109,6 +109,8 @@ The user authorized full customer UI polish before APK preparation, then request
 
 ## Observed codebase
 
+Latest prototype-alignment verification: formatting passes with no pending changes, whole-app Dart analysis reports No issues found, and git diff --check passes. shop_navigation.dart supplies the four-item navigation and shared circular cart button using the existing CartController. Existing widget-test total expectation was updated for summary/footer duplicate display; widget/browser tests were not executed due the known SDK-cache/browser-tool limitations. No backend files or dependencies were changed. Actual Home/Categories/Cart/Account routing, badges, responsive layout, and banner controls still need the user's hot-restarted app review.
+
 Latest full-UI/banner verification: source formatting and whole-app Dart analysis pass (No issues found), git diff --check passes, and all four referenced local photo files exist. Browser/widget autoplay and rendering were not executed by the assistant; Flutter SDK cache write restrictions still apply. No APK was built. Full user-terminal restart instructions are in docs/UI_REVIEW.md.
 
 Customer visual pass: updated app.dart and the five customer screens, added shop_layout.dart (heading/panel/footer/empty-state widgets), and restyled SignInPrompt. Product/cart/checkout footers are bounded, product and checkout layouts adapt to wide screens, catalog grid/text heights scale, and account role/owner guards stay in place. CollectionBanner uses the four user-supplied JPGs from asset/img, declared in pubspec.yaml; originals are preserved and are not mapped to sellable products. No database, Edge Function, or payment-service logic was changed for this pass.
@@ -129,7 +131,7 @@ Backend, Flutter foundation, cart/addresses, and checkout review are implemented
 
 ## Immediate next step
 
-Keep APK preparation behind UI review. In the Flutter terminal press q, then from ecommerce/ run flutter pub get and flutter run -d edge --web-port 63594 to rebuild the new banner assets. Confirm four photos cycle every 5 seconds and manual controls work, then inspect Product details, Cart, Checkout, and Account at phone/desktop widths using docs/UI_REVIEW.md. Uploaded catalog photos should render in product image areas without reseeding.
+Keep APK preparation behind prototype-alignment review. Press capital R in the existing Flutter terminal, then verify four nav labels, Categories scrolling, top circular cart/count on Home and product details, Cart/back navigation, search-before-banner, and the aligned cards/footers. Use docs/UI_REVIEW.md. If photo assets were never bundled, fully restart from ecommerce/ with flutter pub get and flutter run -d edge --web-port 63594. Do not claim pixel/visual verification from analysis alone.
 
 The user explicitly has not checked unpaid expiry. Use the existing unpaid order after its displayed payment deadline plus callback/worker allowance, then verify Expired and Reserved = 0. Do not start another checkout merely to repeat this check.
 

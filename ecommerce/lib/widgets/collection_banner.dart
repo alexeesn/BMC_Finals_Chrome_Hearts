@@ -3,9 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 class CollectionBanner extends StatefulWidget {
-  const CollectionBanner({super.key, this.active = true});
+  const CollectionBanner({super.key, this.active = true, this.onBrowse});
 
   final bool active;
+  final VoidCallback? onBrowse;
 
   @override
   State<CollectionBanner> createState() => _CollectionBannerState();
@@ -114,7 +115,7 @@ class _CollectionBannerState extends State<CollectionBanner>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'THE ARCHIVE / CH COLLECTION',
+          'THE COLLECTION / 01',
           style: TextStyle(
             fontSize: 10,
             letterSpacing: 2,
@@ -123,7 +124,7 @@ class _CollectionBannerState extends State<CollectionBanner>
         ),
         const SizedBox(height: 12),
         Text(
-          compact ? 'Dark essentials.' : 'Silver soul.\nDark essentials.',
+          'Details that\nstay with you.',
           style: TextStyle(
             fontFamily: 'serif',
             fontSize: compact ? 30 : 40,
@@ -132,9 +133,21 @@ class _CollectionBannerState extends State<CollectionBanner>
           ),
         ),
         const SizedBox(height: 10),
-        const Text(
-          'Worn your way.',
-          style: TextStyle(color: Color(0xffd9d6cf)),
+        TextButton(
+          onPressed: widget.onBrowse,
+          style: TextButton.styleFrom(
+            padding: EdgeInsets.zero,
+            alignment: Alignment.centerLeft,
+            minimumSize: const Size(0, 36),
+            foregroundColor: const Color(0xffd9d6cf),
+          ),
+          child: const Text(
+            'Browse collection ↗',
+            style: TextStyle(
+              fontSize: 12,
+              decoration: TextDecoration.underline,
+            ),
+          ),
         ),
       ],
     ),
@@ -180,7 +193,7 @@ class _CollectionBannerState extends State<CollectionBanner>
     clipBehavior: Clip.antiAlias,
     decoration: BoxDecoration(
       color: const Color(0xff111113),
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(2),
       border: Border.all(color: const Color(0xff373739)),
     ),
     child: Column(
@@ -190,50 +203,22 @@ class _CollectionBannerState extends State<CollectionBanner>
           builder: (context, box) {
             final wide = box.maxWidth >= 700;
             final largeText = MediaQuery.textScalerOf(context).scale(14) > 20;
-            if (wide) {
-              return Row(
-                children: [
-                  Expanded(flex: 5, child: _copy()),
-                  Expanded(
-                    flex: 6,
-                    child: _slideshow(
-                      (box.maxWidth / 2.4).clamp(320.0, 460.0),
-                      wide: true,
-                    ),
-                  ),
-                ],
-              );
-            }
             final images = _slideshow(
-              (box.maxWidth * 1.1).clamp(280.0, 440.0),
-              wide: false,
+              wide
+                  ? (box.maxWidth / 2.4).clamp(320.0, 460.0)
+                  : (box.maxWidth / 1.5).clamp(178.0, 240.0),
+              wide: true,
             );
-            if (largeText) {
+            if (largeText && !wide) {
               return Column(children: [images, _copy(compact: true)]);
             }
-            return Stack(
+            return Row(
               children: [
-                images,
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: DecoratedBox(
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          stops: [0.35, 1],
-                          colors: [Colors.transparent, Color(0xf5000000)],
-                        ),
-                      ),
-                    ),
-                  ),
+                Expanded(
+                  flex: wide ? 5 : 6,
+                  child: _copy(compact: !wide),
                 ),
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: IgnorePointer(child: _copy(compact: true)),
-                ),
+                Expanded(flex: wide ? 6 : 4, child: images),
               ],
             );
           },

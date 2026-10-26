@@ -9,6 +9,7 @@ import '../services/order_placement.dart';
 import '../services/shop_gateway.dart';
 import '../widgets/sign_in_prompt.dart';
 import '../widgets/shop_layout.dart';
+import '../widgets/shop_navigation.dart';
 import 'addresses_screen.dart';
 import 'orders_screen.dart';
 
@@ -229,8 +230,8 @@ class _CheckoutReviewState extends State<_CheckoutReview> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '01 / Delivery address',
-            style: Theme.of(context).textTheme.titleLarge,
+            'Delivery address',
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 16),
           if (_addresses != null && _addresses!.isEmpty)
@@ -289,8 +290,11 @@ class _CheckoutReviewState extends State<_CheckoutReview> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '02 / Your selection',
-                  style: Theme.of(context).textTheme.titleLarge,
+                  'Your pieces',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 for (var index = 0; index < quote.items.length; index++) ...[
@@ -326,7 +330,10 @@ class _CheckoutReviewState extends State<_CheckoutReview> {
               children: [
                 Text(
                   'Order summary',
-                  style: Theme.of(context).textTheme.titleLarge,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 _MoneyRow(label: 'Subtotal', value: quote.subtotalMinor),
@@ -355,29 +362,39 @@ class _CheckoutReviewState extends State<_CheckoutReview> {
       canPop: !_placing,
       child: Scaffold(
         appBar: AppBar(
+          toolbarHeight: 70,
+          leadingWidth: 64,
+          leading: Padding(
+            padding: const EdgeInsets.only(left: 20),
+            child: Center(
+              child: ShopHeaderButton(
+                icon: Icons.arrow_back,
+                tooltip: 'Back from checkout',
+                onPressed: _placing
+                    ? null
+                    : () => Navigator.of(context).maybePop(),
+              ),
+            ),
+          ),
           title: const Text('Checkout'),
           actions: [
-            IconButton(
-              tooltip: 'Refresh checkout',
-              onPressed: _loading || frozen ? null : _initialize,
-              icon: const Icon(Icons.refresh),
+            const Center(
+              child: Text(
+                'REVIEW',
+                style: TextStyle(fontSize: 10, letterSpacing: 2),
+              ),
             ),
+            const SizedBox(width: 20),
           ],
         ),
         body: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 1120),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const ShopHeading(
-                    eyebrow: 'Checkout / Review',
-                    title: 'One last look.',
-                    subtitle: 'Check your selection and delivery details before placing your order.',
-                  ),
-                  const SizedBox(height: 28),
                   if (_loading)
                     const Padding(
                       padding: EdgeInsets.only(bottom: 20),
@@ -467,21 +484,59 @@ class _CheckoutReviewState extends State<_CheckoutReview> {
         bottomNavigationBar: quote == null
             ? null
             : ShopFooter(
-                child: SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: _loading || _placing || _unfinished != null
-                        ? null
-                        : _place,
-                    icon: const Icon(Icons.arrow_forward, size: 18),
-                    label: Text(
-                      _placing
-                          ? 'Placing order…'
-                          : _attempt == null
-                          ? 'Place Order'
-                          : 'Retry same checkout',
-                    ),
-                  ),
+                child: LayoutBuilder(
+                  builder: (context, box) {
+                    final total = Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Total to pay',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          formatPesos(quote.totalMinor),
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    );
+                    final action = FilledButton(
+                      onPressed: _loading || _placing || _unfinished != null
+                          ? null
+                          : _place,
+                      child: Text(
+                        _placing
+                            ? 'Placing order…'
+                            : _attempt == null
+                            ? 'Place Order'
+                            : 'Retry same checkout',
+                      ),
+                    );
+                    if (box.maxWidth < 300 ||
+                        MediaQuery.textScalerOf(context).scale(14) > 20) {
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [total, const SizedBox(height: 12), action],
+                      );
+                    }
+                    return Row(
+                      children: [
+                        Expanded(child: total),
+                        const SizedBox(width: 10),
+                        Expanded(child: action),
+                      ],
+                    );
+                  },
                 ),
               ),
       ),
@@ -510,7 +565,10 @@ class _MoneyRow extends StatelessWidget {
         Text(label),
         Text(
           formatPesos(value),
-          style: total ? Theme.of(context).textTheme.titleLarge : null,
+          style: TextStyle(
+            fontSize: total ? 15 : 12,
+            fontWeight: total ? FontWeight.w700 : FontWeight.w400,
+          ),
         ),
       ],
     ),

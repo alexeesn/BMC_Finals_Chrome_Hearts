@@ -6,6 +6,7 @@ import 'checkout_screen.dart';
 import '../services/cart_controller.dart';
 import '../widgets/product_art.dart';
 import '../widgets/shop_layout.dart';
+import '../widgets/shop_navigation.dart';
 import '../widgets/sign_in_prompt.dart';
 import '../widgets/shopping_feedback.dart';
 
@@ -73,9 +74,9 @@ class _ProductScreenState extends State<ProductScreen> {
   Widget _gallery(CatalogProduct product) => Column(
     children: [
       AspectRatio(
-        aspectRatio: 1,
+        aspectRatio: 1.15,
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(2),
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -88,7 +89,7 @@ class _ProductScreenState extends State<ProductScreen> {
               if (product.imageUrls.length > 1)
                 Positioned(
                   bottom: 16,
-                  right: 16,
+                  left: 20,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
@@ -152,108 +153,171 @@ class _ProductScreenState extends State<ProductScreen> {
   Widget _details(CatalogProduct product) {
     final price = _selected?.priceMinor ?? product.startingPrice;
     final theme = Theme.of(context);
-    return Column(
+    final heading = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ShopHeading(eyebrow: product.category, title: product.name),
-        const SizedBox(height: 16),
+        Text(
+          product.category.toUpperCase(),
+          style: TextStyle(
+            fontSize: 10,
+            letterSpacing: 1.5,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 5),
+        Text(
+          product.name,
+          style: const TextStyle(
+            fontFamily: 'serif',
+            fontSize: 27,
+            height: 1.15,
+          ),
+        ),
+      ],
+    );
+    final amount = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
         if (_selected == null && product.variants.length > 1)
           Text(
-            'Starting from',
-            style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+            'From',
+            style: TextStyle(
+              fontSize: 10,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
         Text(
           price == null ? 'Unavailable' : formatPesos(price),
-          style: theme.textTheme.headlineSmall,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        ),
+      ],
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        LayoutBuilder(
+          builder: (context, box) {
+            if (box.maxWidth < 300 ||
+                MediaQuery.textScalerOf(context).scale(14) > 20) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [heading, const SizedBox(height: 12), amount],
+              );
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: heading),
+                const SizedBox(width: 12),
+                amount,
+              ],
+            );
+          },
         ),
         const SizedBox(height: 24),
-        ShopPanel(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'SELECT AN OPTION',
-                style: TextStyle(fontSize: 11, letterSpacing: 2),
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 10,
-                runSpacing: 8,
-                children: product.variants
-                    .map(
-                      (variant) => ChoiceChip(
-                        label: Text(
-                          '${variant.label}${variant.availableStock <= 0 ? ' · Sold out' : ''}',
-                        ),
-                        selected: _selected?.id == variant.id,
-                        onSelected:
-                            variant.availableStock <= 0 || _saving || _buying
-                            ? null
-                            : (_) => setState(() {
-                                _selected = variant;
-                                _quantity = 1;
-                              }),
-                      ),
-                    )
-                    .toList(),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                _selected == null
-                    ? (product.inStock
-                          ? 'Select an available option to view stock.'
-                          : 'Currently out of stock.')
-                    : '${_selected!.availableStock} available',
-                style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        ShopPanel(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Row(
-            children: [
-              const Expanded(child: Text('Quantity')),
-              IconButton(
-                tooltip: 'Decrease quantity',
-                onPressed: !_saving && !_buying && _quantity > 1
-                    ? () => setState(() => _quantity--)
-                    : null,
-                icon: const Icon(Icons.remove),
-              ),
-              SizedBox(
-                width: 32,
-                child: Text(
-                  '$_quantity',
-                  textAlign: TextAlign.center,
-                  semanticsLabel: 'Quantity $_quantity',
+        const Text('Size / option', style: TextStyle(fontSize: 12)),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: product.variants
+              .map(
+                (variant) => ChoiceChip(
+                  showCheckmark: false,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                  label: Text(
+                    '${variant.label}${variant.availableStock <= 0 ? ' · Sold out' : ''}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      decoration: variant.availableStock <= 0
+                          ? TextDecoration.lineThrough
+                          : null,
+                    ),
+                  ),
+                  selected: _selected?.id == variant.id,
+                  onSelected: variant.availableStock <= 0 || _saving || _buying
+                      ? null
+                      : (_) => setState(() {
+                          _selected = variant;
+                          _quantity = 1;
+                        }),
                 ),
-              ),
-              IconButton(
-                tooltip: 'Increase quantity',
-                onPressed:
-                    !_saving &&
-                        !_buying &&
-                        _selected != null &&
-                        _quantity < _selected!.availableStock &&
-                        _quantity < 99
-                    ? () => setState(() => _quantity++)
-                    : null,
-                icon: const Icon(Icons.add),
-              ),
-            ],
+              )
+              .toList(),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          _selected == null
+              ? (product.inStock
+                    ? 'Select an available option to view stock.'
+                    : 'Currently out of stock.')
+              : '${_selected!.availableStock} available',
+          style: TextStyle(
+            fontSize: 12,
+            color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
-        const Divider(height: 48),
-        Text('About this piece', style: theme.textTheme.titleLarge),
-        const SizedBox(height: 12),
+        const SizedBox(height: 24),
+        Row(
+          children: [
+            const Expanded(
+              child: Text('Quantity', style: TextStyle(fontSize: 12)),
+            ),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                border: Border.all(color: theme.colorScheme.outlineVariant),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    tooltip: 'Decrease quantity',
+                    onPressed: !_saving && !_buying && _quantity > 1
+                        ? () => setState(() => _quantity--)
+                        : null,
+                    icon: const Icon(Icons.remove, size: 17),
+                  ),
+                  SizedBox(
+                    width: 32,
+                    child: Text(
+                      '$_quantity',
+                      textAlign: TextAlign.center,
+                      semanticsLabel: 'Quantity $_quantity',
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Increase quantity',
+                    onPressed:
+                        !_saving &&
+                            !_buying &&
+                            _selected != null &&
+                            _quantity < _selected!.availableStock &&
+                            _quantity < 99
+                        ? () => setState(() => _quantity++)
+                        : null,
+                    icon: const Icon(Icons.add, size: 17),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const Divider(height: 40),
+        const Text(
+          'Description',
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 8),
         Text(
           product.description.isEmpty
               ? 'Explore the available options above.'
               : product.description,
           style: TextStyle(
-            height: 1.8,
+            fontSize: 12,
+            height: 1.7,
             color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
@@ -266,41 +330,63 @@ class _ProductScreenState extends State<ProductScreen> {
     final product = widget.product;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Product details'),
+        toolbarHeight: 70,
+        leadingWidth: 64,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 20),
+          child: Center(
+            child: ShopHeaderButton(
+              icon: Icons.arrow_back,
+              tooltip: 'Back to home',
+              onPressed: _saving || _buying
+                  ? null
+                  : () => Navigator.of(context).maybePop(),
+            ),
+          ),
+        ),
+        centerTitle: true,
+        title: const Text(
+          'THE DETAILS',
+          style: TextStyle(fontSize: 11, letterSpacing: 2),
+        ),
         actions: [
-          IconButton(
-            tooltip: 'View cart',
+          ShopCartButton(
+            cart: widget.cart,
             onPressed: _saving || _buying
                 ? null
                 : () {
                     widget.onViewCart();
                     Navigator.of(context).pop();
                   },
-            icon: const Icon(Icons.shopping_bag_outlined),
           ),
+          const SizedBox(width: 20),
         ],
       ),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1120),
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
             child: LayoutBuilder(
               builder: (context, box) => box.maxWidth >= 800
-                  ? Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(flex: 6, child: _gallery(product)),
-                        const SizedBox(width: 40),
-                        Expanded(flex: 5, child: _details(product)),
-                      ],
+                  ? Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(flex: 6, child: _gallery(product)),
+                          const SizedBox(width: 40),
+                          Expanded(flex: 5, child: _details(product)),
+                        ],
+                      ),
                     )
                   : Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         _gallery(product),
-                        const SizedBox(height: 28),
-                        _details(product),
+                        Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: _details(product),
+                        ),
                       ],
                     ),
             ),
@@ -321,7 +407,7 @@ class _ProductScreenState extends State<ProductScreen> {
                   : _buyNow,
               child: const Text('Buy Now'),
             );
-            if (box.maxWidth < 330 ||
+            if (box.maxWidth < 300 ||
                 MediaQuery.textScalerOf(context).scale(14) > 19) {
               return Column(
                 mainAxisSize: MainAxisSize.min,

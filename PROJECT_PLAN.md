@@ -49,7 +49,9 @@ These are planning defaults, not additional confirmed requirements:
 | My Orders / Order Details | Order history, purchased items, delivery snapshot, totals, and statuses |
 | Account | Profile, orders, addresses, and sign out |
 
-Proposed main navigation: Home, Categories, Cart, Account.
+Confirmed main navigation follows the accepted HTML: Home, Categories, Cart, Account. Categories
+reveals the Home category chips; Cart opens the full cart layout with a back-to-shopping header.
+The Home and product headers include a circular cart button with the current item count.
 
 Detailed proposed layouts and screen states: [Screen plan](docs/SCREEN_PLAN.md).
 Offline interactive design preview: [Shopping flow](docs/previews/shopping-flow.html).

@@ -737,7 +737,7 @@ void main() {
       await tester.tap(find.text('Buy Now'));
       await tester.pumpAndSettle();
       expect(find.text('Shipping'), findsOneWidget);
-      expect(find.text('₱12,150.00'), findsOneWidget);
+      expect(find.text('₱12,150.00'), findsNWidgets(2));
       expect(shop.lastQuoteSelection!.source, 'buy_now');
       expect(shop.lastQuoteSelection!.items.single, {
         'variant_id': 'm',

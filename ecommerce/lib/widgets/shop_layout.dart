@@ -41,7 +41,7 @@ class ShopPanel extends StatelessWidget {
   const ShopPanel({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(20),
+    this.padding = const EdgeInsets.all(16),
   });
   final Widget child;
   final EdgeInsetsGeometry padding;
@@ -52,7 +52,7 @@ class ShopPanel extends StatelessWidget {
     decoration: BoxDecoration(
       color: Theme.of(context).colorScheme.surface,
       border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(2),
     ),
     child: child,
   );
@@ -77,7 +77,10 @@ class ShopFooter extends StatelessWidget {
         heightFactor: 1,
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: maxWidth),
-          child: Padding(padding: const EdgeInsets.all(16), child: child),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 15, 20, 20),
+            child: child,
+          ),
         ),
       ),
     ),

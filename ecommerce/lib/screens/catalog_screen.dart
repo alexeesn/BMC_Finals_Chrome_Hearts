@@ -6,6 +6,7 @@ import '../services/cart_controller.dart';
 import '../widgets/product_art.dart';
 import '../widgets/collection_banner.dart';
 import '../widgets/shop_layout.dart';
+import '../widgets/shop_navigation.dart';
 import 'product_screen.dart';
 
 class CatalogScreen extends StatefulWidget {
@@ -16,12 +17,14 @@ class CatalogScreen extends StatefulWidget {
     required this.onViewCart,
     this.refreshToken = 0,
     this.active = true,
+    this.categoryRequest = 0,
   });
   final ShopGateway gateway;
   final CartController cart;
   final VoidCallback onViewCart;
   final int refreshToken;
   final bool active;
+  final int categoryRequest;
   @override
   State<CatalogScreen> createState() => _CatalogScreenState();
 }
@@ -29,6 +32,10 @@ class CatalogScreen extends StatefulWidget {
 class _CatalogScreenState extends State<CatalogScreen> {
   late Future<List<CatalogProduct>> _catalog;
   final _search = TextEditingController();
+  final _categoriesKey = GlobalKey();
+  final _productsKey = GlobalKey();
+  final _firstCategory = FocusNode();
+  bool _pendingCategories = false;
   String _category = 'All';
   @override
   void initState() {
@@ -39,6 +46,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
   @override
   void dispose() {
     _search.dispose();
+    _firstCategory.dispose();
     super.dispose();
   }
 
@@ -48,6 +56,27 @@ class _CatalogScreenState extends State<CatalogScreen> {
     if (widget.refreshToken != oldWidget.refreshToken) {
       _catalog = widget.gateway.loadCatalog();
     }
+    if (widget.categoryRequest != oldWidget.categoryRequest) {
+      _pendingCategories = true;
+    }
+    if (widget.active && _pendingCategories) _revealCategories();
+  }
+
+  void _revealCategories() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !widget.active || !_pendingCategories) return;
+      final target = _categoriesKey.currentContext;
+      if (target == null) return;
+      _pendingCategories = false;
+      Scrollable.ensureVisible(
+        target,
+        alignment: 0.1,
+        duration: MediaQuery.disableAnimationsOf(context)
+            ? Duration.zero
+            : const Duration(milliseconds: 300),
+      );
+      _firstCategory.requestFocus();
+    });
   }
 
   Future<void> _reload() async {
@@ -60,21 +89,54 @@ class _CatalogScreenState extends State<CatalogScreen> {
     }
   }
 
+  void _browse() {
+    final target = _productsKey.currentContext;
+    if (target == null) return;
+    Scrollable.ensureVisible(
+      target,
+      alignment: 0.1,
+      duration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : const Duration(milliseconds: 300),
+    );
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: const Text(
-        'CH / COLLECTION',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(fontFamily: 'serif', letterSpacing: 2),
+      toolbarHeight: 70 * (MediaQuery.textScalerOf(context).scale(14) / 14),
+      titleSpacing: 20,
+      title: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'CH / COLLECTION',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontFamily: 'serif',
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.9,
+              color: Color(0xffd9d6cf),
+            ),
+          ),
+          SizedBox(height: 6),
+          Text(
+            'Objects. Apparel. Everyday.',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 9,
+              letterSpacing: 2,
+              color: Color(0xffaaa8a3),
+            ),
+          ),
+        ],
       ),
       actions: [
-        IconButton(
-          tooltip: 'Refresh catalog',
-          onPressed: _reload,
-          icon: const Icon(Icons.refresh),
-        ),
+        ShopCartButton(cart: widget.cart, onPressed: widget.onViewCart),
+        const SizedBox(width: 20),
       ],
     ),
     body: Center(
@@ -97,6 +159,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
             if (!snapshot.hasData) {
               return const Center(child: CircularProgressIndicator());
             }
+            if (_pendingCategories) _revealCategories();
             final all = snapshot.data!;
             final categories = [
               'All',
@@ -123,16 +186,26 @@ class _CatalogScreenState extends State<CatalogScreen> {
                     child: Padding(
                       padding: const EdgeInsets.all(20),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          CollectionBanner(active: widget.active),
-                          const SizedBox(height: 20),
+                          const Text(
+                            'FIND YOUR NEXT PIECE',
+                            style: TextStyle(
+                              fontSize: 10,
+                              letterSpacing: 2,
+                              color: Color(0xffaaa8a3),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
                           TextField(
                             controller: _search,
                             onChanged: (_) => setState(() {}),
                             decoration: InputDecoration(
                               hintText: 'Search the collection',
-                              prefixIcon: const Icon(Icons.search),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 12,
+                              ),
                               suffixIcon: _search.text.isEmpty
                                   ? null
                                   : IconButton(
@@ -142,29 +215,56 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                     ),
                             ),
                           ),
-                          const SizedBox(height: 16),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 4,
-                            children: categories
-                                .map(
-                                  (category) => ChoiceChip(
-                                    label: Text(category),
-                                    selected: activeCategory == category,
-                                    onSelected: (_) =>
-                                        setState(() => _category = category),
-                                  ),
-                                )
-                                .toList(),
+                          const SizedBox(height: 18),
+                          CollectionBanner(
+                            active: widget.active,
+                            onBrowse: _browse,
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 18),
+                          SingleChildScrollView(
+                            key: _categoriesKey,
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: categories
+                                  .asMap()
+                                  .entries
+                                  .map(
+                                    (entry) => Padding(
+                                      padding: const EdgeInsets.only(right: 7),
+                                      child: ChoiceChip(
+                                        focusNode: entry.key == 0
+                                            ? _firstCategory
+                                            : null,
+                                        showCheckmark: false,
+                                        label: Text(
+                                          entry.value,
+                                          style: const TextStyle(fontSize: 11),
+                                        ),
+                                        shape: const StadiumBorder(),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 9,
+                                          vertical: 9,
+                                        ),
+                                        selected: activeCategory == entry.value,
+                                        onSelected: (_) => setState(
+                                          () => _category = entry.value,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
                           Wrap(
+                            key: _productsKey,
+                            alignment: WrapAlignment.spaceBetween,
                             spacing: 16,
                             runSpacing: 8,
                             crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               Text(
-                                'The collection',
+                                'The edit',
                                 style: Theme.of(context)
                                     .textTheme
                                     .headlineSmall,
@@ -220,7 +320,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                               ? 3
                               : 4;
                           final cardWidth =
-                              (width - (columns - 1) * 16) / columns;
+                              (width - (columns - 1) * 12) / columns;
                           final scale =
                               MediaQuery.textScalerOf(context).scale(14) / 14;
                           return SliverGrid(
@@ -228,17 +328,17 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                 SliverGridDelegateWithFixedCrossAxisCount(
                                   crossAxisCount: columns,
                                   mainAxisExtent:
-                                      cardWidth * 1.16 + 146 * scale,
-                                  crossAxisSpacing: 16,
-                                  mainAxisSpacing: 20,
+                                      cardWidth * 1.12 + 104 * scale,
+                                  crossAxisSpacing: 12,
+                                  mainAxisSpacing: 22,
                                 ),
                             delegate: SliverChildBuilderDelegate((
                               context,
                               index,
                             ) {
                               final product = visible[index];
-                              return Card(
-                                margin: EdgeInsets.zero,
+                              return Material(
+                                color: Colors.transparent,
                                 clipBehavior: Clip.antiAlias,
                                 child: InkWell(
                                   onTap: () => Navigator.of(context).push(
@@ -258,7 +358,19 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                         child: Stack(
                                           fit: StackFit.expand,
                                           children: [
-                                            ProductArt(product: product),
+                                            Container(
+                                              foregroundDecoration:
+                                                  BoxDecoration(
+                                                    border: Border.all(
+                                                      color: const Color(
+                                                        0xff323235,
+                                                      ),
+                                                    ),
+                                                  ),
+                                              child: ProductArt(
+                                                product: product,
+                                              ),
+                                            ),
                                             if (!product.inStock)
                                               Positioned(
                                                 top: 12,
@@ -284,7 +396,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                         ),
                                       ),
                                       Padding(
-                                        padding: const EdgeInsets.all(14),
+                                        padding: const EdgeInsets.only(top: 9),
                                         child: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
@@ -294,27 +406,32 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                               style: const TextStyle(
-                                                fontSize: 11,
+                                                fontSize: 10,
+                                                letterSpacing: 1,
                                                 color: Color(0xffaaa8a3),
                                               ),
                                             ),
-                                            const SizedBox(height: 6),
+                                            const SizedBox(height: 4),
                                             Text(
                                               product.name,
                                               maxLines: 2,
                                               overflow: TextOverflow.ellipsis,
                                               style: const TextStyle(
-                                                fontFamily: 'serif',
-                                                fontSize: 20,
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
+                                                height: 1.3,
                                               ),
                                             ),
-                                            const SizedBox(height: 10),
+                                            const SizedBox(height: 4),
                                             Text(
                                               product.startingPrice == null
                                                   ? 'Unavailable'
                                                   : formatPesos(
                                                       product.startingPrice!,
                                                     ),
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                              ),
                                             ),
                                           ],
                                         ),

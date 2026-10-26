@@ -5,6 +5,7 @@ import 'screens/catalog_screen.dart';
 import 'screens/cart_screen.dart';
 import 'services/shop_gateway.dart';
 import 'services/cart_controller.dart';
+import 'widgets/shop_navigation.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({
@@ -24,7 +25,7 @@ class MyApp extends StatelessWidget {
           brightness: Brightness.dark,
           primary: const Color(0xffd9d6cf),
           onPrimary: const Color(0xff101012),
-          surface: const Color(0xff151517),
+          surface: const Color(0xff1b1b1e),
           onSurface: const Color(0xfff2f0eb),
         ).copyWith(
           secondary: const Color(0xffbdbbb5),
@@ -37,11 +38,11 @@ class MyApp extends StatelessWidget {
           surfaceContainerLow: const Color(0xff151517),
           onSurfaceVariant: const Color(0xffaaa8a3),
           outline: const Color(0xff66666b),
-          outlineVariant: const Color(0xff303034),
+          outlineVariant: const Color(0xff373739),
         );
     final baseText = ThemeData(brightness: Brightness.dark).textTheme;
     final buttonShape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(2),
     );
     return MaterialApp(
       title: 'CH / Collection',
@@ -50,7 +51,7 @@ class MyApp extends StatelessWidget {
       darkTheme: ThemeData(
         useMaterial3: true,
         colorScheme: colors,
-        scaffoldBackgroundColor: const Color(0xff0d0d0f),
+        scaffoldBackgroundColor: const Color(0xff101012),
         textTheme: baseText.copyWith(
           headlineLarge: const TextStyle(
             fontFamily: 'serif',
@@ -73,12 +74,12 @@ class MyApp extends StatelessWidget {
           bodyMedium: baseText.bodyMedium?.copyWith(height: 1.5),
         ),
         appBarTheme: AppBarTheme(
-          backgroundColor: const Color(0xff0d0d0f),
+          backgroundColor: const Color(0xff0c0c0e),
           surfaceTintColor: Colors.transparent,
           centerTitle: false,
           titleTextStyle: TextStyle(
             fontFamily: 'serif',
-            fontSize: 22,
+            fontSize: 26,
             color: colors.onSurface,
           ),
           shape: Border(bottom: BorderSide(color: colors.outlineVariant)),
@@ -87,7 +88,7 @@ class MyApp extends StatelessWidget {
           elevation: 0,
           color: colors.surface,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(2),
             side: BorderSide(color: colors.outlineVariant),
           ),
         ),
@@ -102,7 +103,7 @@ class MyApp extends StatelessWidget {
           backgroundColor: colors.surface,
           selectedColor: colors.primary,
           side: BorderSide(color: colors.outlineVariant),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          shape: const StadiumBorder(),
           labelStyle: TextStyle(color: colors.onSurface),
           secondaryLabelStyle: TextStyle(color: colors.onPrimary),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
@@ -114,23 +115,23 @@ class MyApp extends StatelessWidget {
             horizontal: 18,
             vertical: 18,
           ),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(2)),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(2),
             borderSide: BorderSide(color: colors.outlineVariant),
           ),
         ),
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
-            minimumSize: const Size(48, 52),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            minimumSize: const Size(48, 48),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             shape: buttonShape,
           ),
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
-            minimumSize: const Size(48, 52),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            minimumSize: const Size(48, 48),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             shape: buttonShape,
           ),
         ),
@@ -170,7 +171,16 @@ class ShopShell extends StatefulWidget {
 class _ShopShellState extends State<ShopShell> {
   int _tab = 0;
   int _catalogVersion = 0;
+  int _categoryRequest = 0;
   late final _cart = CartController(widget.gateway);
+
+  void _selectTab(int index) {
+    setState(() {
+      _tab = index;
+      if (index == 1) _categoryRequest++;
+    });
+  }
+
   @override
   void dispose() {
     _cart.dispose();
@@ -178,55 +188,37 @@ class _ShopShellState extends State<ShopShell> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    body: IndexedStack(
-      index: _tab,
-      children: [
-        CatalogScreen(
-          gateway: widget.gateway,
-          cart: _cart,
-          onViewCart: () => setState(() => _tab = 1),
-          refreshToken: _catalogVersion,
-          active: _tab == 0,
-        ),
-        CartScreen(
-          cart: _cart,
-          onViewCollection: () => setState(() => _tab = 0),
-        ),
-        AccountScreen(
-          gateway: widget.gateway,
-          onOrdersClosed: _cart.refresh,
-          onAdminClosed: () async {
-            if (mounted) setState(() => _catalogVersion++);
-            await _cart.refresh();
-          },
-        ),
-      ],
-    ),
-    bottomNavigationBar: NavigationBar(
-      selectedIndex: _tab,
-      onDestinationSelected: (index) => setState(() => _tab = index),
-      destinations: [
-        const NavigationDestination(
-          icon: Icon(Icons.grid_view_outlined),
-          label: 'Collection',
-        ),
-        NavigationDestination(
-          icon: AnimatedBuilder(
-            animation: _cart,
-            builder: (context, _) => Badge(
-              isLabelVisible: _cart.count > 0,
-              label: Text('${_cart.count}'),
-              child: const Icon(Icons.shopping_bag_outlined),
-            ),
+  Widget build(BuildContext context) => PopScope(
+    canPop: _tab == 0,
+    onPopInvokedWithResult: (didPop, result) {
+      if (!didPop && mounted) _selectTab(0);
+    },
+    child: Scaffold(
+      body: IndexedStack(
+        index: _tab < 2 ? 0 : _tab - 1,
+        children: [
+          CatalogScreen(
+            gateway: widget.gateway,
+            cart: _cart,
+            onViewCart: () => _selectTab(2),
+            refreshToken: _catalogVersion,
+            active: _tab < 2,
+            categoryRequest: _categoryRequest,
           ),
-          label: 'Cart',
-        ),
-        const NavigationDestination(
-          icon: Icon(Icons.person_outline),
-          label: 'Account',
-        ),
-      ],
+          CartScreen(cart: _cart, onViewCollection: () => _selectTab(0)),
+          AccountScreen(
+            gateway: widget.gateway,
+            onOrdersClosed: _cart.refresh,
+            onAdminClosed: () async {
+              if (mounted) setState(() => _catalogVersion++);
+              await _cart.refresh();
+            },
+          ),
+        ],
+      ),
+      bottomNavigationBar: _tab == 2
+          ? null
+          : ShopBottomNavigation(selectedIndex: _tab, onSelected: _selectTab),
     ),
   );
 }

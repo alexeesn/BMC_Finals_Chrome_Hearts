@@ -133,15 +133,14 @@ The preview only switches between two fictional addresses to show the layout; an
 
 ## Implemented customer visual pass
 
-The Collection, Product details, Cart, Checkout, and Account screens now share neutral black
-and silver colors, system-serif headings, bordered panels, consistent controls, and constrained
-desktop content widths. Collection cards adapt from one to four columns and use uploaded
-catalog photos. The homepage banner uses the four user-supplied photos from asset/img and
-automatically advances every 5 seconds, with swipe/dots/arrows and pause/play controls.
-Product image/details and checkout summary use side-by-side layouts on wide
-screens; product actions stack on narrow screens or with larger text. Cart selection is highlighted
-and checkout actions stay in bounded footer bars. Account links and identity/role are grouped
-into panels. See [UI review](UI_REVIEW.md) for the actual Flutter screen checklist and limits.
+The user explicitly requested alignment with the accepted HTML after the first Flutter visual
+pass diverged. Home now uses the brand/tagline and top-right circular cart/count, followed by
+search, banner, category pills, and The edit. Bottom navigation is Home/Categories/Cart/Account;
+Categories reveals the chip row. Flat product cards, rectangular controls, product header/price
+layout, separated cart rows, and side-by-side total/action footers follow the reference. Cart uses
+its full layout and back header. The four-photo automatic banner remains the approved addition,
+with swipe/dots/arrows and pause/play controls. Wide-screen adaptations and larger-text fallbacks
+are preserved. See [UI review](UI_REVIEW.md) for the Flutter checklist and verification limits.
 
 ## Current Flutter order tracking
 
