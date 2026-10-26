@@ -81,9 +81,10 @@ Use the existing Paid test order and note its order number. No new payment or SQ
 2. Open that order number. Expect payment **Paid** and fulfillment `preparing`.
 3. Tap **Mark as shipped**. Expect `Fulfillment: shipped` while payment stays **Paid**.
 4. Return to Account → My orders → open the same order → tap the top-right refresh icon.
-   Expect `Delivery: shipped`. For another customer's order, check it using that customer's account.
+   Expect **Shipped** as the current stage in Delivery progress. For another customer's order,
+   check it using that customer's account.
 5. Return to the admin order → tap **Mark as delivered**. Expect `Fulfillment: delivered`.
-6. Refresh the same customer order again. Expect `Delivery: delivered` and payment **Paid**.
+6. Refresh the same customer order again. Expect **Delivered** completed and payment **Paid**.
    The delivered admin order should no longer offer a next fulfillment action.
 
 If the expected button is absent, inspect the payment and fulfillment labels first. An already

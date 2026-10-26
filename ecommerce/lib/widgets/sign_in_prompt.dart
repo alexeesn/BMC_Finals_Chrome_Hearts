@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/shop_gateway.dart';
 import '../screens/auth_screen.dart';
+import 'shop_layout.dart';
 
 Future<bool> ensureSignedIn(BuildContext context, ShopGateway gateway) async {
   if (gateway.currentUser != null) return true;
@@ -16,22 +17,13 @@ class SignInPrompt extends StatelessWidget {
   final ShopGateway gateway;
   final String message;
   @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.lock_outline, size: 48),
-          const SizedBox(height: 16),
-          Text(message, textAlign: TextAlign.center),
-          const SizedBox(height: 20),
-          FilledButton(
-            onPressed: () => ensureSignedIn(context, gateway),
-            child: const Text('Sign in'),
-          ),
-        ],
-      ),
+  Widget build(BuildContext context) => ShopEmptyState(
+    icon: Icons.lock_outline,
+    title: 'Keep your collection close.',
+    message: message,
+    action: FilledButton(
+      onPressed: () => ensureSignedIn(context, gateway),
+      child: const Text('Sign in'),
     ),
   );
 }

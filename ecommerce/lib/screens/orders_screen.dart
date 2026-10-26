@@ -7,6 +7,7 @@ import '../models/catalog.dart';
 import '../models/order.dart';
 import '../services/order_placement.dart';
 import '../services/shop_gateway.dart';
+import '../widgets/order_delivery_progress.dart';
 import '../widgets/shopping_feedback.dart';
 import '../widgets/sign_in_prompt.dart';
 
@@ -17,6 +18,20 @@ String paymentStatusLabel(ShopOrder order) => switch (order.paymentStatus) {
   'needs_review' => 'Needs review',
   _ => 'Pending payment',
 };
+
+String _deliveryLabel(String status) => switch (status) {
+  'preparing' => 'Preparing',
+  'shipped' => 'Shipped',
+  'delivered' => 'Delivered',
+  _ => 'Updating delivery',
+};
+
+String _localOrderTime(BuildContext context, DateTime value) {
+  final local = value.toLocal();
+  final labels = MaterialLocalizations.of(context);
+  return '${labels.formatMediumDate(local)} · '
+      '${labels.formatTimeOfDay(TimeOfDay.fromDateTime(local))}';
+}
 
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key, required this.gateway});
@@ -203,17 +218,51 @@ class _OrdersListState extends State<_OrdersList> {
                 const Text('Showing your latest 50 orders.'),
               ...data.orders.map(
                 (order) => Card(
-                  child: ListTile(
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
                     onTap: _resuming ? null : () => _open(order),
-                    title: Text(
-                      order.number,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  order.number,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.titleSmall,
+                                ),
+                              ),
+                              const Icon(Icons.chevron_right),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 16,
+                            runSpacing: 8,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              Text(
+                                formatPesos(order.totalMinor),
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              Text(
+                                '${paymentStatusLabel(order)}'
+                                '${order.paid ? ' · ${_deliveryLabel(order.fulfillmentStatus)}' : ''}',
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _localOrderTime(context, order.createdAt),
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
                     ),
-                    subtitle: Text(
-                      '${paymentStatusLabel(order)} · ${order.createdAt.toLocal().toString().split('.').first}',
-                    ),
-                    trailing: Text(formatPesos(order.totalMinor)),
                   ),
                 ),
               ),
@@ -408,10 +457,15 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen>
                           ),
                         ),
                       if (order.paid)
-                        Text('Delivery: ${order.fulfillmentStatus}'),
+                        OrderDeliveryProgress(status: order.fulfillmentStatus),
                       if (order.pending)
-                        const Text(
-                          'Your order is waiting for confirmed payment.',
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            'Your order is waiting for confirmed payment.\n'
+                            'Payment deadline (local time): '
+                            '${_localOrderTime(context, order.expiresAt)}',
+                          ),
                         ),
                       if (order.paymentStatus == 'needs_review')
                         const Text(

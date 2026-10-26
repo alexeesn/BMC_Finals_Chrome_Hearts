@@ -131,6 +131,28 @@ The preview only switches between two fictional addresses to show the layout; an
 - Loading, empty, validation, and error states are specified for Flutter implementation.
 - Sample values are clearly distinguished from confirmed catalog/shipping data.
 
-## Next milestone
+## Implemented customer visual pass
+
+The Collection, Product details, Cart, Checkout, and Account screens now share neutral black
+and silver colors, system-serif headings, bordered panels, consistent controls, and constrained
+desktop content widths. Collection cards adapt from one to four columns and use uploaded
+catalog photos. The homepage banner uses the four user-supplied photos from asset/img and
+automatically advances every 5 seconds, with swipe/dots/arrows and pause/play controls.
+Product image/details and checkout summary use side-by-side layouts on wide
+screens; product actions stack on narrow screens or with larger text. Cart selection is highlighted
+and checkout actions stay in bounded footer bars. Account links and identity/role are grouped
+into panels. See [UI review](UI_REVIEW.md) for the actual Flutter screen checklist and limits.
+
+## Current Flutter order tracking
+
+My orders uses flexible dark cards showing the order number, total, payment status, delivery
+stage for confirmed paid orders, and a readable local creation date/time. Order details shows
+a vertical Preparing → Shipped → Delivered progress card for paid orders, with explicit
+Completed, Current stage, and Upcoming labels. It reads the saved backend fulfillment state;
+it does not estimate courier movement or invent tracking timestamps. Pending orders show
+the saved payment deadline in local time. Passing the deadline still requires provider/worker
+verification before the app can show Expired.
+
+## Original preview milestone
 
 The current dark layout is accepted. Prepare the database/schema and permissions plan, including stock reservation/expiry/cancellation rules, before implementing Flutter features. Incorporate any later user design feedback into this baseline.

@@ -10,6 +10,10 @@ The admin panel is implemented locally; apply migration 0006 and follow
 [admin setup/checkpoints](../docs/ADMIN_SETUP.md) for catalog/images/stock and fulfillment.
 Hosted/device admin verification and release validation remain pending.
 
+The Collection, Product details, Cart, Checkout, and Account screens now have a shared
+black/silver visual pass. See [customer UI review](../docs/UI_REVIEW.md) for opening the
+updated Flutter app and reviewing the layouts before APK preparation.
+
 From this folder:
 
 ```powershell

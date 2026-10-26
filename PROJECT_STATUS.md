@@ -4,7 +4,7 @@ Last updated: 2026-10-26 (Asia/Singapore).
 
 ## Current phase
 
-The user reported the edit Save correction is good and authorized proceeding to fulfillment. Existing admin and customer screens implement paid Preparing → Shipped → Delivered. The current checkpoint is to update the existing Paid test order from admin, then refresh that same order in customer My orders after each transition. A detailed walkthrough is in docs/ADMIN_SETUP.md. Actual hosted fulfillment remains unverified. Cover-photo selection/upload was implemented earlier but its saved storefront result still needs explicit confirmation. Also constrained the fixed Save footer to its content height so it preserves form space.
+The user authorized full customer UI polish before APK preparation, then requested using their four photos in asset/img as an automatic Shein-like banner. The five customer screens and shared theme/layout are updated; Collection now uses CollectionBanner with 5-second photo rotation, swipe/dots/arrows/pause, app/tab/route suspension, and reduced-motion support. Photos are registered in pubspec.yaml. A full user-terminal Flutter restart is needed to rebuild the asset bundle; see docs/UI_REVIEW.md. Actual browser rendering/autoplay still needs user verification. Earlier shopping/fulfillment checks are user-reported good; unpaid expiry was explicitly not yet checked. APK remains pending.
 
 ## Completed
 
@@ -109,6 +109,12 @@ The user reported the edit Save correction is good and authorized proceeding to 
 
 ## Observed codebase
 
+Latest full-UI/banner verification: source formatting and whole-app Dart analysis pass (No issues found), git diff --check passes, and all four referenced local photo files exist. Browser/widget autoplay and rendering were not executed by the assistant; Flutter SDK cache write restrictions still apply. No APK was built. Full user-terminal restart instructions are in docs/UI_REVIEW.md.
+
+Customer visual pass: updated app.dart and the five customer screens, added shop_layout.dart (heading/panel/footer/empty-state widgets), and restyled SignInPrompt. Product/cart/checkout footers are bounded, product and checkout layouts adapt to wide screens, catalog grid/text heights scale, and account role/owner guards stay in place. CollectionBanner uses the four user-supplied JPGs from asset/img, declared in pubspec.yaml; originals are preserved and are not mapped to sellable products. No database, Edge Function, or payment-service logic was changed for this pass.
+
+Latest order-tracking UI polish: Dart formatting and whole-app analysis pass (No issues found); git diff --check passes. Browser rendering/widget execution was not performed in this environment. New order_delivery_progress.dart is shared presentation only; no database/payment transitions or dependencies changed. The user explicitly reported that unpaid expiry has not yet been checked.
+
 Latest fulfillment checkpoint preparation: whole-app Dart analysis and the standalone admin model checks pass, including paid forward transitions. git diff --check passes. Added the explicit existing-order demo walkthrough to docs/ADMIN_SETUP.md. Hosted Shipped/Delivered changes and customer visibility have not been performed by the assistant or confirmed by the user.
 
 - `ecommerce/lib/main.dart` initializes Supabase through a retryable startup screen; `app.dart` defines the dark theme and Collection/Account navigation.
@@ -123,21 +129,13 @@ Backend, Flutter foundation, cart/addresses, and checkout review are implemented
 
 ## Immediate next step
 
-Account → Admin panel → Orders → Paid → existing Paid test order → Mark as shipped. Then Account → My orders → same order → top-right refresh: expect Delivery: shipped and Paid. Repeat with Mark as delivered and verify Delivery: delivered in My orders. No new checkout, SQL, or secrets are needed. After user confirms this checkpoint, continue saved product-photo/stock/cart/expiry/customer-isolation checks, then UI polish and Android release validation.
+Keep APK preparation behind UI review. In the Flutter terminal press q, then from ecommerce/ run flutter pub get and flutter run -d edge --web-port 63594 to rebuild the new banner assets. Confirm four photos cycle every 5 seconds and manual controls work, then inspect Product details, Cart, Checkout, and Account at phone/desktop widths using docs/UI_REVIEW.md. Uploaded catalog photos should render in product image areas without reseeding.
 
-Before relying on the worker/real checkout, use the current generated bundles for `reconcile-payments` and `create-payment`; they include session-ID response compatibility too. Their previous deployment instructions were supplied but their runtime results were not verified.
+The user explicitly has not checked unpaid expiry. Use the existing unpaid order after its displayed payment deadline plus callback/worker allowance, then verify Expired and Reserved = 0. Do not start another checkout merely to repeat this check.
 
-Public webhook URL supplied by the user: `https://pxxendicdpkdjuhidiur.supabase.co/functions/v1/xendit-webhook`. Project URL: `https://pxxendicdpkdjuhidiur.supabase.co`. These are not secrets. The user confirmed a 200 sample response after the fix. Do not store/repeat webhook token headers. Actual PAY/order verification remains pending.
+No SQL, secrets, dashboard deployment, or dependency changes are required for the visual pass. The user reports the earlier setup, Paid payment, admin catalog/fulfillment, cart/stock, customer isolation, and Buy Now checkpoints good. Preserve current accounts, roles, products, orders, browser origin, and recovery state. Do not rerun migrations/seed or regenerate keys based on older historical notes.
 
-All three secrets are already user-reported saved; do not regenerate them. Keep the worker token available securely for the later Vault configuration; never request or record its value.
-
-The `supabase/setup/verify.sql` checkpoint is now explicitly user-reported all six OK. Do not reset the project or rerun completed migrations.
-
-Then follow the full guide for Auth/admin setup, Xendit Test Mode secrets, browser-editor function deployment, webhook registration, and Cron/Vault worker configuration. Actual project/account access remains unverified. Do not claim connection success until the hosted checks and a genuine test transaction pass.
-
-Flutter foundation, overflow fix, checkout review, and one Paid test payment are user-reported good. The admin milestone is locally implemented, awaiting 0006 deployment and device checks. Next after admin checks: remaining cart/stock/expiry/customer-isolation regression, UI/assets, and Android release validation.
-
-Keep the one-store Android app, shared customer/admin app, and fixed shipping fee as proposals until confirmed through discussion or an implementation request. The user has confirmed the dark-theme direction; the final font, shop name, and product imagery remain open.
+After UI feedback and remaining asset/expiry checks, continue Android release preparation and actual phone validation. The assistant has not built or verified an APK.
 
 ## Open decisions
 
@@ -147,7 +145,7 @@ Keep the one-store Android app, shared customer/admin app, and fixed shipping fe
 - The four-screen dark layout is accepted; final branding and typography assets remain open. `CH / COLLECTION` is only a preview label.
 - Shipping fee and address-entry approach.
 - Working backend defaults: PHP/PH, PHP 150 sample shipping, 30-minute reservation, safe expiry reconciliation, no initial paid-order cancellation/refunds, and revision-aware paid-cart cleanup. These are configurable baseline choices, not independently confirmed business rules.
-- Supabase and Xendit accounts are in use; migrations 0001–0004, seed, secrets, admin promotion, and six database checks are user-reported complete. Public client configuration is supplied. App runtime access, provider API access, and actual PAY behavior remain unverified.
+- Supabase/Xendit setup, public client configuration, app access, Paid test transactions, and admin shopping checkpoints are user-reported successful. Hosted records have not been independently inspected. Unpaid expiry and release APK/device validation remain pending.
 - Any extra grading or presentation requirements.
 
 Resolve questions at the relevant milestone instead of asking everything at once.

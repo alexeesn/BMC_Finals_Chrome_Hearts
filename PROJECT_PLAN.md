@@ -53,7 +53,7 @@ Proposed main navigation: Home, Categories, Cart, Account.
 
 Detailed proposed layouts and screen states: [Screen plan](docs/SCREEN_PLAN.md).
 Offline interactive design preview: [Shopping flow](docs/previews/shopping-flow.html).
-The preview uses fictional data for review. The existing Flutter app implements customer shopping/payment/history and shared-app admin catalog/images/variants/stock/order fulfillment. Review is read-only; Place Order uses the trusted Edge endpoint. The user reported a Paid test payment. Admin needs hosted migration 0006 and device checks; remaining regressions, UI/assets, and release validation are pending. See [Flutter setup](docs/FLUTTER_SETUP.md), [payment checkpoints](docs/PAYMENT_TEST.md), and [admin setup](docs/ADMIN_SETUP.md).
+The preview uses fictional data for review. The existing Flutter app implements customer shopping/payment/history and shared-app admin catalog/images/variants/stock/order fulfillment. Review is read-only; Place Order uses the trusted Edge endpoint. The user reported Paid test payments, fulfillment, cart/stock, customer isolation, and Buy Now checks successful. The full customer visual pass is implemented and awaiting browser review before APK preparation. Unpaid expiry, final assets, and release validation remain pending. See [Flutter setup](docs/FLUTTER_SETUP.md), [payment checkpoints](docs/PAYMENT_TEST.md), [admin setup](docs/ADMIN_SETUP.md), and [UI review](docs/UI_REVIEW.md).
 
 ### Shopping behavior
 
