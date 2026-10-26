@@ -4,7 +4,7 @@ Last updated: 2026-10-26 (Asia/Singapore).
 
 ## Current phase
 
-The user reports admin access and product creation work. Photo upload was initially described as a picker problem, then clarified that no upload/photo control is visible in the form. Added Choose photo and preview directly to Add/Edit product, plus a visible Photos & stock catalog action. Save persists product metadata before uploading/replacing the cover photo; a photo failure keeps the product and gives recovery guidance. Next: restart the existing Edge app and verify actual photo selection/upload. No new SQL/dependencies are needed for this UI correction; image runtime verification remains pending.
+The user reports admin access and product creation work. Photo upload was initially described as a picker problem, then clarified that no upload/photo control was visible in the form. Added Choose photo and preview directly to Add/Edit product, plus a visible Photos & stock catalog action. Save now stays fixed at the bottom of product/category/variant forms, so it remains visible while scrolling. Product save persists metadata before uploading/replacing the cover photo; a photo failure keeps the product and gives recovery guidance. Next: restart the existing Edge app and verify edit-save and actual photo selection/upload. No new SQL/dependencies are needed for these UI corrections; runtime verification remains pending.
 
 ## Completed
 

@@ -43,14 +43,27 @@ abstract class _FormState<T extends StatefulWidget> extends State<T> {
             key: form,
             child: ListView(
               padding: const EdgeInsets.all(20),
-              children: [
-                ...fields.map(
-                  (field) => Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: field,
-                  ),
-                ),
-                FilledButton(
+              children: fields
+                  .map(
+                    (field) => Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: field,
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton(
                   onPressed: working ? null : save,
                   child: Text(
                     saving
@@ -60,7 +73,7 @@ abstract class _FormState<T extends StatefulWidget> extends State<T> {
                         : 'Save',
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         ),
