@@ -211,7 +211,17 @@ test('authenticated worker processes a pending inbox event and polls each sessio
   assert.equal(result.status,200); assert.equal(providerCalls,1); assert.ok(finished);
   assert.deepEqual(await result.json(),{processed:1,failed:0,unresolved:[]});
 });
-test('return page performs no database or payment writes', () => {
-  assert.equal(handleReturn(new Request('https://example.test/?result=success')).status,200);
+test('return page uses readable text on the default Supabase hostname without claiming paid', async () => {
+  const result = handleReturn(new Request('https://example.test/?result=success'));
+  assert.equal(result.status,200);
+  assert.equal(result.headers.get('content-type'),'text/plain; charset=utf-8');
+  assert.equal(result.headers.get('cache-control'),'no-store');
+  const text = await result.text();
+  assert.match(text,/Return to your order/);
+  assert.match(text,/Close this tab and return to the shop/);
+  assert.doesNotMatch(text,/<html|<!doctype|<style|payment successful|payment received/i);
+  const cancelled = await handleReturn(new Request('https://example.test/?result=cancelled')).text();
+  assert.match(cancelled,/Checkout paused/);
+  assert.doesNotMatch(cancelled,/payment successful|payment received/i);
   assert.equal(handleReturn(new Request('https://example.test/',{method:'POST'})).status,405);
 });

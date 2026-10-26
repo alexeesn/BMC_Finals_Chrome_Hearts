@@ -158,7 +158,7 @@ node scripts/build-dashboard-functions.mjs
 
 4. Save each function's settings. The short files under `supabase/functions/<name>/index.ts` import shared code; do not paste only those short wrappers into a one-file browser editor.
 5. `create-payment` cannot be tested using a public key alone. It needs a real signed-in customer JWT. A 401 from an unauthenticated dashboard test does not justify disabling its protection.
-6. Open `https://<project-ref>.supabase.co/functions/v1/payment-return?result=success` in a browser. Expected: a static page telling the customer to return to the order; it makes no payment claim or database changes.
+6. Open `https://<project-ref>.supabase.co/functions/v1/payment-return?result=success` in a browser. Expected: readable plain text telling the customer to return to the order; it makes no payment claim or database changes. Default Edge GET HTML responses are rewritten to text/plain, so the handler intentionally sends text instead of HTML source.
 
 **Checkpoint:** deployed ang exact function versions at alam ang URLs. [Dashboard deployment](https://supabase.com/docs/guides/functions/quickstart-dashboard), [function authentication](https://supabase.com/docs/guides/functions/auth).
 

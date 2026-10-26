@@ -4,7 +4,7 @@ Last updated: 2026-10-26 (Asia/Singapore).
 
 ## Current phase
 
-The user hit `Unable to confirm checkout (HTTP 0)` when placing an order from Flutter web in Edge at `http://localhost:63594/`. No hosted HTTP response/order result was supplied. Exact-origin CORS configuration is the leading hypothesis, not a confirmed diagnosis. Next: add `http://localhost:63594` to Edge Secret APP_ORIGINS, retain the same browser/port, and resume the existing checkout. Deployment versions/worker/browser/provider checks remain pending. No new SQL is needed; admin management is still pending.
+The user reported completing a Xendit test payment and explicitly confirmed Paid in the app. Treat the first end-to-end payment as user-reported successful, without independently inspected provider/database records. The hosted return page showed HTML source because Supabase rewrites default-host HTML responses to text/plain; fixed the local handler to send readable plain text. Next: update only the deployed payment-return bundle (JWT OFF), verify the message without paying again, then proceed to the admin milestone or remaining stock/cart/expiry checks.
 
 ## Completed
 
@@ -83,6 +83,10 @@ The user hit `Unable to confirm checkout (HTTP 0)` when placing an order from Fl
 - The user attempted order submission and reported `Unable to confirm checkout (HTTP 0). Check My orders before retrying`. HTTP 0 is a client transport/no-readable-response result, not an actual provider status. The deployed function's exact-origin CORS allowlist may be missing/mismatched; no browser Network/Console or hosted invocation evidence has confirmed the cause yet.
 - The user supplied the current Flutter app URL `http://localhost:63594/` and clarified they run in Microsoft Edge. Its origin is `http://localhost:63594` without a trailing slash. Do not switch ports/browser or clear site data before recovering the existing attempt; the local recovery hint is origin-scoped. Do not assume Chrome or 5173 is the current origin.
 - Added two diagnostic regressions verifying that an allowed-origin OPTIONS request returns 204 without auth/provider/database calls and that allowed-origin auth failures retain readable CORS headers. All 30 handler tests passed. No handler source or hosted configuration was changed for this diagnosis.
+- Following exact Edge-origin APP_ORIGINS/save and same-checkout resume instructions, the user reported "oks na next task". No explicit hosted response/status, order number, or payment-page result was supplied. Proceed with the actual order/page checkpoint instead of assuming a completed payment or starting admin work.
+- The user reported Xendit opens in a new tab, they completed payment there, reached the return URL, and the app reflects checkout. When asked for the exact Order details payment status, they explicitly answered Paid. This is the first user-reported successful end-to-end test payment. No actual payment IDs/customer details/tokens were collected, and the assistant did not independently inspect provider or database evidence.
+- The user saw raw HTML on payment-return. Verified official Supabase documentation: default Edge GET text/html responses are rewritten to text/plain. Changed handleReturn to intentionally return readable UTF-8 plain text, retaining no-store/nosniff and no payment-state writes/claims. Success/cancel messages remain distinct. No custom domain or other hosting is required.
+- Regenerated dashboard bundles and strengthened the return-handler regression. All 30 Node handler tests passed, and the generated payment-return bundle passed a Node syntax check. This patch changes no SQL or Flutter code. Only payment-return needs redeployment for this display fix; do not re-pay or modify the paid order to test it.
 
 ## Observed codebase
 
@@ -98,7 +102,7 @@ Backend, Flutter foundation, cart/addresses, and checkout review are implemented
 
 ## Immediate next step
 
-Guide Supabase → Edge Functions → Secrets: create/edit APP_ORIGINS to include exactly `http://localhost:63594` (append with a comma if preserving existing allowed origins), Save. Keep the currently open Edge app/port/site data. After saving, use Account → My orders → Resume checkout or the existing Retry same checkout control. This retains the same idempotency key and checks for an existing order. If HTTP 0 persists, inspect the browser Network/Console for the create-payment OPTIONS/POST URL, status/error and CORS message; ask for no request headers, JWTs, or keys. Confirm the latest create-payment bundle is deployed and JWT remains ON; a 401 is a separate auth issue. Do not claim the CORS hypothesis resolved without a successful response. Then finish the current worker bundle and actual test PAY checkpoint. No SQL reruns or secret-token regeneration are required.
+Guide Supabase → Edge Functions → payment-return → Code: paste the entire current `supabase/dashboard/payment-return/index.ts`, Deploy updates, keep JWT OFF. Open the existing return URL with `?result=success` directly to verify readable text; there is no need for another payment. The user has explicitly confirmed Paid in the app. Then move to admin catalog/image/stock/fulfillment implementation if requested; retain pending checks for cart cleanup, one-time stock consumption, duplicate delivery, unpaid expiry, and two-customer isolation. Do not claim those individual checks passed from the paid result alone.
 
 Before relying on the worker/real checkout, use the current generated bundles for `reconcile-payments` and `create-payment`; they include session-ID response compatibility too. Their previous deployment instructions were supplied but their runtime results were not verified.
 

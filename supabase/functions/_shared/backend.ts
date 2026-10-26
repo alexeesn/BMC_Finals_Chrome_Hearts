@@ -279,5 +279,10 @@ export function handleReturn(request: Request): Response {
   // Deliberately performs no database writes and never calls a payment successful.
   const cancelled = new URL(request.url).searchParams.get('result') === 'cancelled';
   const title = cancelled ? 'Checkout paused' : 'Return to your order';
-  return new Response('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + title + '</title><style>body{background:#101012;color:#f2f0eb;font:16px/1.7 system-ui;margin:64px 24px}main{max-width:440px;margin:auto;border:1px solid #444;padding:28px}h1{font:32px Georgia}p{color:#bbb}</style><main><h1>' + title + '</h1><p>Close this page and return to the shop. Your order will show its confirmed payment status after verification.</p><p>School project · Test payments</p></main></html>', {headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','content-security-policy':"default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'",'x-content-type-options':'nosniff'}});
+  // The default Supabase hostname rewrites GET text/html to text/plain.
+  // Send readable text intentionally so customers do not see HTML source.
+  return new Response(title + '\n\nClose this tab and return to the shop.\nRefresh your order to see its confirmed payment status.\n\nSchool project - Test payments', {
+    headers:{'content-type':'text/plain; charset=utf-8','cache-control':'no-store',
+      'content-security-policy':"default-src 'none'; frame-ancestors 'none'",'x-content-type-options':'nosniff'},
+  });
 }

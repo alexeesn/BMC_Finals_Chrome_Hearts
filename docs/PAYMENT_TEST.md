@@ -56,6 +56,10 @@ flutter run -d chrome --web-port 5173
 4. Follow the official test/simulation instructions for a payment method actually available to your
    Xendit test account. Do not assume that saving an API key enables every wallet/card method.
 5. Close the hosted return page and return to the app. Tap **Refresh payment status** if needed.
+   The return endpoint intentionally shows a plain-text message. Supabase rewrites default-host
+   HTML responses to text/plain; if you see HTML source, update only `payment-return` from its
+   current dashboard bundle with JWT OFF. Open the return URL directly to verify the fix without
+   paying again. See [Supabase routing behavior](https://supabase.com/docs/guides/functions/http-methods).
    The order page polls pending status every 10 seconds while visible/in the foreground and refreshes
    after app resume. It never marks paid because a URL opened or a page closed.
 6. Confirm **Paid** only after the backend's order and payment states both say paid. Check that
@@ -89,6 +93,7 @@ flutter run -d chrome --web-port 5173
 | 409 or uncertain setup | Open/refresh the existing order; keep the same checkout key. Inspect worker/provider evidence if it remains unknown. |
 | Payment page does not open | Allow the popup and click Continue again; verify the saved test URL and session expiry. |
 | Page returns but order stays pending | Inspect callback/worker status and captured provider evidence; do not manually mark paid. |
+| Return page displays HTML source | Deploy the current plain-text `payment-return` bundle, JWT OFF; no SQL or new payment is needed. |
 | Cart does not update immediately | Close the order flow/return from My orders or refresh Cart. Only matching unchanged source cart rows are removed after confirmed payment. |
 
 ## Local verification
