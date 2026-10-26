@@ -2,6 +2,10 @@
 
 May local SQL files na tayo. Wala pa akong na-upload sa Supabase account mo. Ang unang activity ay database setup; hiwalay ang Xendit secrets at Edge Function deployment sa later steps.
 
+Kung purchase **records** ang wala sa Table Editor, tingnan muna ang
+[dummy purchase at status guide](PURCHASE_RECORDS.md). May check doon para malaman
+kung missing tables talaga o empty rows lang; huwag i-rerun ang schema sa existing tables.
+
 ## Unang file lang muna
 
 1. Buksan ang intended project mo sa [Supabase Dashboard](https://supabase.com/dashboard). Kung wala pang project, sundan muna ang Step 1 ng [full setup guide](SUPABASE_XENDIT_SETUP.md).

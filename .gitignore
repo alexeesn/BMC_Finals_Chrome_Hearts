@@ -1,6 +1,4 @@
 # Local credentials and generated dashboard copies. Canonical source stays in functions/.
-.env
-.env.*
 !.env.example
 supabase/.temp/
 supabase/dashboard/

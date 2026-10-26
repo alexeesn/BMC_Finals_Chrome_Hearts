@@ -19,6 +19,7 @@ Build a functional school ecommerce app with a Chrome Hearts product catalog, us
 | Delivery details | Saved customer addresses and checkout |
 | Administration | Include an admin panel |
 | Setup documentation | Step-by-step Supabase setup and Xendit-to-Supabase connection guide with implementation files |
+| App installation | README with environment configuration, dependency installation, browser/Android run, and school-demo APK installation steps; `.env` and shareable `.env.example` |
 | Codebase | User's own local project; Flutter app is in `ecommerce/` |
 | Git workflow | User handles commits and pushes |
 
@@ -87,6 +88,12 @@ Admin access must be provisioned through a trusted process and enforced on the b
 | Supabase Storage | Product images |
 | Supabase Edge Functions | Trusted checkout/invoice operations and webhook processing |
 | Xendit | Hosted payment and asynchronous test payment updates |
+
+Flutter installation uses `ecommerce/.env` passed with `--dart-define-from-file=.env`
+to the existing compile-time `SUPABASE_URL` / `SUPABASE_PUBLIC_KEY` configuration.
+Only public client configuration belongs there; the local env is ignored by Git and
+the example contains placeholders. Existing source defaults remain fallback values.
+See the [installation README](README.md) for prerequisites and Android/browser commands.
 
 ### Proposed database entities
 

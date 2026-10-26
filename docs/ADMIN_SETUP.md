@@ -64,6 +64,10 @@ Archive catalog records instead of hard deleting products or order-linked files.
 
 ## Orders and fulfillment
 
+Kung wala pang order records, puwedeng gamitin ang owner-only
+[dummy purchase seed](PURCHASE_RECORDS.md). May `DEMO` order na Paid/Preparing para
+sa status demo, walang actual payment o pagbabago sa catalog/cart/stock.
+
 1. Admin panel → Orders shows store orders with payment filters and 30-row pagination.
 2. Open an order to inspect purchased item/address snapshots, final total, payment status, and
    fulfillment status. Admin details do not offer a customer payment button or manual Mark Paid.

@@ -78,6 +78,11 @@ Hindi database connection string ang ibibigay sa Xendit. Public HTTPS Edge Funct
 
 ## Step 4 — Authentication, admin, at images
 
+Kung dummy purchase rows ang kailangan sa Table Editor at gumaganang delivery status,
+gamitin ang [purchase-record guide](PURCHASE_RECORDS.md) pagkatapos ng database/Auth
+setup. May owner-only [demo-purchase.sql](../supabase/setup/demo-purchase.sql) para sa
+existing app tables. Sample Paid record ito; hiwalay sa actual Xendit test payment.
+
 **After Step 3.**
 
 1. Sa Authentication settings, ihanda ang email/password sign-in at email-confirmation behavior na gagamitin sa demo. Kapag required ang confirmation, kumpirmahin ang test email bago mag-login.

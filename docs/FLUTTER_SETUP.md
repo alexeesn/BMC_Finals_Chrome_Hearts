@@ -16,15 +16,18 @@ An admin role label does not imply that admin management screens are implemented
 
 ## Run on your computer
 
+For full prerequisites, environment setup, Android/APK installation, and current
+access limitations, start with the [installation README](../README.md).
+
 1. Open a terminal in `ecommerce/`, the existing Flutter app folder.
-2. Run:
+2. Prepare `.env` as described in the installation README, then run:
 
 ```powershell
 flutter pub get
-flutter run
+flutter run -d edge --web-port 63594 --dart-define-from-file=.env
 ```
 
-3. Choose a connected Android device/emulator, or Chrome if offered for an initial UI check.
+3. For Android, use `flutter devices` and run with `-d YOUR_DEVICE_ID` instead of the web target/port.
 4. The collection should load Archive Tee, Silver Band, and Everyday Cap from Supabase.
    Images show a fallback until product image records and Storage files exist.
 5. Open a product. Select an available option and verify its price/stock. Sold-out options
@@ -88,9 +91,21 @@ The existing Edge backend remains the payment authority; no new SQL is needed fo
 
 ## Public configuration
 
-`lib/config/app_config.dart` contains the user-supplied project URL and public publishable key.
-These are client configuration, not server secrets. No Xendit keys or privileged database
-keys are included. You can override them at launch:
+Preferred setup is `ecommerce/.env`, based on `.env.example`. The file contains only
+`SUPABASE_URL` and `SUPABASE_PUBLIC_KEY`. The existing `String.fromEnvironment`
+configuration reads these values when passed through Flutter's compile-time flag:
+
+```powershell
+flutter run -d edge --web-port 63594 --dart-define-from-file=.env
+```
+
+The local `.env` and `lib/config/app_config.dart` fallbacks retain the earlier public
+configuration; dashboard access to that project is currently unresolved. Confirm the
+intended accessible project before expecting hosted functionality. Public configuration
+is compiled into the app, so keep all backend secrets out. Stop and run again after
+environment changes. No dotenv dependency or bundled env asset is needed.
+
+You can also pass individual compile-time values:
 
 ```powershell
 flutter run --dart-define=SUPABASE_URL=https://YOUR_PROJECT.supabase.co --dart-define=SUPABASE_PUBLIC_KEY=YOUR_PUBLIC_KEY

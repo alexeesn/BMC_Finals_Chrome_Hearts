@@ -44,8 +44,9 @@ try {
     await run(executable('psql'),['-X','-q','-v','ON_ERROR_STOP=1','-o',path.join(folder,'queries.log'),'-f',path.join(root,'supabase',file)]);
   }
   await run(process.execPath,['supabase/tests/concurrency.mjs']);
+  await run(process.execPath,['supabase/tests/demo-purchase.mjs']);
   await run(process.execPath,['--test','supabase/tests/edge.test.mjs']);
-  console.log('PASS: fresh migrations, database permissions/state checks, concurrent checkout, and mocked Edge handler tests.');
+  console.log('PASS: fresh migrations, database permissions/state checks, concurrent checkout, dummy purchase/status flow, and mocked Edge handler tests.');
 } catch (error) {
   console.error(error.stderr || error.message); process.exitCode=1;
 } finally {
