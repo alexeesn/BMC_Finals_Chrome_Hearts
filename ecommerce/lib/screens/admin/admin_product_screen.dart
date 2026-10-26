@@ -1,9 +1,8 @@
-import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/admin.dart';
 import '../../models/catalog.dart';
-import '../../models/shopping.dart';
+import '../../services/product_image_picker.dart';
 import '../../services/shop_gateway.dart';
 import '../../widgets/shopping_feedback.dart';
 import 'admin_guard.dart';
@@ -43,19 +42,8 @@ class _AdminProductScreenState extends State<AdminProductScreen> {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      const type = XTypeGroup(
-        label: 'Product images',
-        extensions: ['jpg', 'jpeg', 'png', 'webp'],
-        mimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
-        uniformTypeIdentifiers: ['public.image'],
-      );
-      final file = await openFile(acceptedTypeGroups: [type]);
-      if (file == null || !mounted) return;
-      if (await file.length() > 5 * 1024 * 1024) {
-        throw const ShoppingException('Choose an image up to 5 MB.');
-      }
-      final image = UploadImage.validate(await file.readAsBytes());
-      if (!mounted) return;
+      final image = await pickProductImage();
+      if (image == null || !mounted) return;
       final sortOrder = product.images.isEmpty
           ? 0
           : product.images

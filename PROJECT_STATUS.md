@@ -4,7 +4,7 @@ Last updated: 2026-10-26 (Asia/Singapore).
 
 ## Current phase
 
-The user moved on after the return-page update instructions and requested the next task. Implemented the shared-app admin panel locally: overview, catalog/categories, draft/archive visibility, image uploads/replacements/gallery, checked variant/stock saves, store orders, and paid fulfillment. Next: guide only migration 0006, then a full app restart and Account → Admin panel checks. file_selector is present in the local package config. Dart/pure checks and full database/security/concurrency tests pass; widget tests and release/device admin validation remain unverified.
+The user reports admin access and product creation work. Photo upload was initially described as a picker problem, then clarified that no upload/photo control is visible in the form. Added Choose photo and preview directly to Add/Edit product, plus a visible Photos & stock catalog action. Save persists product metadata before uploading/replacing the cover photo; a photo failure keeps the product and gives recovery guidance. Next: restart the existing Edge app and verify actual photo selection/upload. No new SQL/dependencies are needed for this UI correction; image runtime verification remains pending.
 
 ## Completed
 
@@ -100,6 +100,13 @@ The user moved on after the return-page update instructions and requested the ne
 - Added three widget cases for customer denial, account-switch hiding, and forward fulfillment. The widget file has 23 cases plus nine generated placeholder cases in product_art_test.dart. Widget execution remains blocked by C:\\flutter\\bin\\cache\\lockfile; device, native picker/Storage upload, and release builds remain unverified.
 - Added docs/ADMIN_SETUP.md and updated setup/backend/Flutter guides. Admin catalog lists up to 1,000 records per entity; store orders are paginated. No hosted deployments, actual catalog/order writes, Git commits, or pushes were performed by the assistant.
 
+
+- The user reports they can add products from admin. They initially selected the option that the picker does not open, then clarified "wala ngang upload photo na nakalagay". Treat this as a discoverability issue in the Add/Edit form, not proof of a browser/plugin/Storage failure.
+- Inspected the installed picker implementation and generated web plugin registrant; file_selector is registered in the generated local config. No actual browser picker/Storage failure was reproduced.
+- Added cover-photo Choose photo/preview/undo controls directly to Add/Edit product. Selection performs no upload; Save first persists the stable product ID, then uploads/replaces its cover. If photo upload is unconfirmed, metadata stays saved and the form returns to management with a message to inspect Photos & stock before retrying.
+- Added a visible Photos & stock action below catalog product rows, preserving a responsive layout. Shared product_image_picker.dart handles file filtering, size/signature checks, and an explicit MissingPluginException restart message without awaiting network before opening the picker.
+- Added a regression covering save-before-upload and partial photo-upload failure preserving the saved product. Whole-app Dart analysis passes; widget execution still requires a permitted Flutter SDK/device environment. No SQL, Edge handlers, dependencies, or actual hosted data were changed for this correction.
+
 ## Observed codebase
 
 - `ecommerce/lib/main.dart` initializes Supabase through a retryable startup screen; `app.dart` defines the dark theme and Collection/Account navigation.
@@ -114,7 +121,7 @@ Backend, Flutter foundation, cart/addresses, and checkout review are implemented
 
 ## Immediate next step
 
-Guide `supabase/migrations/0006_admin_variant_concurrency.sql` in SQL Editor → New Query, paste all and Run. Do not rerun 0001–0005/seed or change payment secrets/functions. Then fully stop/restart the app with `flutter run -d edge --web-port 63594` so the image plugin is registered and the allowed origin/session is preserved. file_selector is already observed installed; run `flutter pub get` only if needed. Sign in with the existing admin account and open Account → Admin panel. Follow `docs/ADMIN_SETUP.md`: category/product drafts, variant/price/stock, image upload, publish, storefront refresh, and paid fulfillment visible in customer history. Hosted 0006 and actual UI/upload are not yet verified.
+Guide a full restart of the existing Edge app on port 63594, then Account → Admin panel → Catalog → Add product or Edit details. Choose photo is now visible near the top; select JPEG/PNG/WebP up to 5 MB, fill product fields, and Save. Existing products also have a Photos & stock action in the catalog list for Upload image/Replace image. Confirm preview, saved image, and storefront appearance; if the picker or upload actually errors, collect the exact message. No SQL reruns or dependency changes are needed. Continue to fulfillment/remaining release checks only after photos are verified.
 
 Before relying on the worker/real checkout, use the current generated bundles for `reconcile-payments` and `create-payment`; they include session-ID response compatibility too. Their previous deployment instructions were supplied but their runtime results were not verified.
 

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:ecommerce/app.dart';
 import 'package:ecommerce/models/catalog.dart';
@@ -10,6 +11,7 @@ import 'package:ecommerce/services/admin_gateway.dart';
 import 'package:ecommerce/screens/admin/admin_guard.dart';
 import 'package:ecommerce/screens/admin/admin_screen.dart';
 import 'package:ecommerce/screens/admin/admin_orders_screen.dart';
+import 'package:ecommerce/screens/admin/admin_forms.dart';
 import 'package:ecommerce/services/order_placement.dart';
 import 'package:ecommerce/screens/orders_screen.dart';
 import 'package:ecommerce/screens/checkout_screen.dart';
@@ -313,6 +315,9 @@ class FakeAdmin implements AdminGateway {
   int statsCalls = 0;
   ShopOrder? order;
   final updates = <String>[];
+  final savedProducts = <AdminProduct>[];
+  final photoProductIds = <String>[];
+  bool photoFails = false;
   @override
   Future<AdminStats> loadStats() async {
     statsCalls++;
@@ -358,7 +363,10 @@ class FakeAdmin implements AdminGateway {
   @override
   Future<void> saveCategory(AdminCategory category) async {}
   @override
-  Future<void> saveProduct(AdminProduct product) async {}
+  Future<void> saveProduct(AdminProduct product) async {
+    savedProducts.add(product);
+  }
+
   @override
   Future<void> saveVariant(AdminVariant variant) async {}
   @override
@@ -367,13 +375,108 @@ class FakeAdmin implements AdminGateway {
     UploadImage image,
     int sortOrder, {
     AdminImage? replacing,
-  }) async {}
+  }) async {
+    photoProductIds.add(productId);
+    if (photoFails) throw StateError('Upload unavailable');
+  }
 }
 
 void main() {
   late FakeShop shop;
   setUp(() => shop = FakeShop());
   tearDown(() => shop.events.close());
+
+  testWidgets(
+    'Product photo selection saves metadata before upload and keeps the saved product on upload failure',
+    (tester) async {
+      shop.identity = const ShopIdentity('admin', 'owner@example.com');
+      tester.view.physicalSize = const Size(800, 1500);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      const catalog = AdminCatalog(
+        categories: [
+          AdminCategory(
+            id: 'category',
+            name: 'Demo',
+            slug: 'demo',
+            active: true,
+            sortOrder: 0,
+          ),
+        ],
+        products: [],
+        variants: [],
+      );
+      for (final fails in [false, true]) {
+        final admin = FakeAdmin()..photoFails = fails;
+        shop.adminService = admin;
+        String? savedId;
+        await tester.pumpWidget(
+          MaterialApp(
+            key: ValueKey(fails),
+            home: Builder(
+              builder: (context) => Scaffold(
+                body: TextButton(
+                  onPressed: () async {
+                    savedId = await Navigator.of(context).push<String>(
+                      MaterialPageRoute<String>(
+                        builder: (_) => AdminProductForm(
+                          shop: shop,
+                          catalog: catalog,
+                          pickImage: () async => UploadImage.validate(
+                            Uint8List.fromList([
+                              137,
+                              80,
+                              78,
+                              71,
+                              13,
+                              10,
+                              26,
+                              10,
+                            ]),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('Open product form'),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('Open product form'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Choose photo'));
+        await tester.pumpAndSettle();
+        expect(admin.savedProducts, isEmpty);
+        expect(admin.photoProductIds, isEmpty);
+        await tester.enterText(
+          find.byType(TextFormField).at(0),
+          'Demo product',
+        );
+        await tester.enterText(
+          find.byType(TextFormField).at(1),
+          'demo-product',
+        );
+        final save = find.widgetWithText(FilledButton, 'Save');
+        await tester.ensureVisible(save);
+        await tester.tap(save);
+        await tester.pumpAndSettle();
+        expect(admin.savedProducts.length, 1);
+        expect(savedId, admin.savedProducts.single.id);
+        expect(admin.photoProductIds, [savedId]);
+        if (fails) {
+          expect(
+            find.textContaining(
+              'Product saved, but photo upload was not confirmed',
+            ),
+            findsOneWidget,
+          );
+        }
+      }
+    },
+  );
 
   testWidgets('Customer cannot open an admin page or load store stats', (
     tester,

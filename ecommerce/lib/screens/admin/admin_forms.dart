@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../models/admin.dart';
+import '../../services/product_image_picker.dart';
 import '../../services/shop_gateway.dart';
 import '../../widgets/shopping_feedback.dart';
 
@@ -16,6 +17,7 @@ String? _slug(String? value) =>
 abstract class _FormState<T extends StatefulWidget> extends State<T> {
   final form = GlobalKey<FormState>();
   bool saving = false;
+  bool get working => saving;
   Future<void> submit(Future<Object?> Function() operation) async {
     if (saving || !form.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
@@ -49,8 +51,14 @@ abstract class _FormState<T extends StatefulWidget> extends State<T> {
                   ),
                 ),
                 FilledButton(
-                  onPressed: saving ? null : save,
-                  child: Text(saving ? 'Saving…' : 'Save'),
+                  onPressed: working ? null : save,
+                  child: Text(
+                    saving
+                        ? 'Saving…'
+                        : working
+                        ? 'Selecting photo…'
+                        : 'Save',
+                  ),
                 ),
               ],
             ),
@@ -145,10 +153,12 @@ class AdminProductForm extends StatefulWidget {
     required this.shop,
     required this.catalog,
     this.product,
+    this.pickImage,
   });
   final ShopGateway shop;
   final AdminCatalog catalog;
   final AdminProduct? product;
+  final Future<UploadImage?> Function()? pickImage;
   @override
   State<AdminProductForm> createState() => _ProductFormState();
 }
@@ -163,6 +173,25 @@ class _ProductFormState extends _FormState<AdminProductForm> {
   late String? _category =
       widget.product?.categoryId ?? widget.catalog.categories.firstOrNull?.id;
   late bool _active = widget.product?.active ?? false;
+  UploadImage? _photo;
+  bool _picking = false;
+  @override
+  bool get working => saving || _picking;
+
+  Future<void> _choosePhoto() async {
+    if (working) return;
+    setState(() => _picking = true);
+    try {
+      final picker = widget.pickImage ?? pickProductImage;
+      final photo = await picker();
+      if (mounted && photo != null) setState(() => _photo = photo);
+    } catch (error) {
+      if (mounted) showShoppingError(context, error);
+    } finally {
+      if (mounted) setState(() => _picking = false);
+    }
+  }
+
   @override
   void dispose() {
     _name.dispose();
@@ -175,6 +204,51 @@ class _ProductFormState extends _FormState<AdminProductForm> {
   Widget build(BuildContext context) => page(
     widget.product == null ? 'Add product' : 'Edit product',
     [
+      Text('Cover photo', style: Theme.of(context).textTheme.titleLarge),
+      const Text(
+        'JPEG, PNG, or WebP · up to 5 MB. The photo uploads when you save.',
+      ),
+      if (_photo != null)
+        SizedBox(
+          height: 180,
+          child: Image.memory(
+            _photo!.bytes,
+            fit: BoxFit.contain,
+            errorBuilder: (_, _, _) =>
+                const Center(child: Icon(Icons.image_outlined, size: 48)),
+          ),
+        )
+      else if (widget.product?.images.isNotEmpty == true)
+        SizedBox(
+          height: 180,
+          child: Image.network(
+            widget.product!.images.first.url,
+            fit: BoxFit.contain,
+            errorBuilder: (_, _, _) =>
+                const Icon(Icons.image_outlined, size: 48),
+          ),
+        ),
+      Wrap(
+        spacing: 8,
+        children: [
+          OutlinedButton.icon(
+            onPressed: working ? null : _choosePhoto,
+            icon: const Icon(Icons.add_photo_alternate_outlined),
+            label: Text(
+              _picking
+                  ? 'Selecting…'
+                  : _photo == null
+                  ? 'Choose photo'
+                  : 'Choose another photo',
+            ),
+          ),
+          if (_photo != null)
+            TextButton(
+              onPressed: working ? null : () => setState(() => _photo = null),
+              child: const Text('Undo photo selection'),
+            ),
+        ],
+      ),
       TextFormField(
         controller: _name,
         enabled: !saving,
@@ -228,6 +302,7 @@ class _ProductFormState extends _FormState<AdminProductForm> {
       ),
     ],
     () => submit(() async {
+      final owner = widget.shop.currentUser?.id;
       await widget.shop.admin.saveProduct(
         AdminProduct(
           id: _id,
@@ -238,6 +313,26 @@ class _ProductFormState extends _FormState<AdminProductForm> {
           active: _active,
         ),
       );
+      if (_photo != null && mounted && widget.shop.currentUser?.id == owner) {
+        try {
+          await widget.shop.admin.uploadImage(
+            _id,
+            _photo!,
+            0,
+            replacing: widget.product?.images.firstOrNull,
+          );
+        } catch (_) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Product saved, but photo upload was not confirmed. Check Photos & stock before retrying.',
+                ),
+              ),
+            );
+          }
+        }
+      }
       return _id;
     }),
   );

@@ -162,25 +162,37 @@ class _AdminCatalogScreenState extends State<AdminCatalogScreen> {
               if (products.isEmpty) const Text('No products found.'),
               ...products.map(
                 (p) => Card(
-                  child: ListTile(
-                    onTap: () => _product(catalog, p),
-                    title: Text(p.name),
-                    subtitle: Text(
-                      '${p.slug} · ${p.active ? 'Active' : 'Draft / archived'}',
-                    ),
-                    leading: p.images.isEmpty
-                        ? const Icon(Icons.image_outlined)
-                        : SizedBox(
-                            width: 48,
-                            height: 56,
-                            child: Image.network(
-                              p.images.first.url,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) =>
-                                  const Icon(Icons.broken_image_outlined),
-                            ),
-                          ),
-                    trailing: const Icon(Icons.chevron_right),
+                  child: Column(
+                    children: [
+                      ListTile(
+                        onTap: () => _product(catalog, p),
+                        title: Text(p.name),
+                        subtitle: Text(
+                          '${p.slug} · ${p.active ? 'Active' : 'Draft / archived'}',
+                        ),
+                        leading: p.images.isEmpty
+                            ? const Icon(Icons.image_outlined)
+                            : SizedBox(
+                                width: 48,
+                                height: 56,
+                                child: Image.network(
+                                  p.images.first.url,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, _, _) =>
+                                      const Icon(Icons.broken_image_outlined),
+                                ),
+                              ),
+                        trailing: const Icon(Icons.chevron_right),
+                      ),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
+                          onPressed: () => _product(catalog, p),
+                          icon: const Icon(Icons.photo_library_outlined),
+                          label: const Text('Photos & stock'),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),

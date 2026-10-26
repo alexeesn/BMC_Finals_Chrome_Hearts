@@ -32,21 +32,27 @@ flutter run -d edge --web-port 63594
    Use Refresh overview after making store changes.
 2. Catalog → Categories: add/edit a category with a unique lowercase hyphenated slug, active
    flag, and display order. Archiving a category hides its products from shoppers.
-3. Catalog → Products → Add product: name, unique slug, category, description. New products
-   default to draft; save first, then add images/variants before publishing.
+3. Catalog → Products → Add product: use **Choose photo** to select an optional cover photo
+   and see its preview, then enter name, unique slug, category, and description. The photo uploads
+   when Save is pressed, after product metadata is saved. New products default to draft.
+   Add variants before publishing. Edit product has the same cover-photo control.
 4. Manage product → Add variant: enter a unique SKU, option/size, PHP price, and stock on hand.
    Price input uses exact centavos, not a floating-point total. Quantity/stock must be whole numbers.
 5. Stock on hand includes reserved items. Available stock is on hand minus reserved.
    The backend refuses stock below reservations. The checked save also refuses a form whose
    variant changed since it was loaded, including changes from checkout/reservation/payment.
    Go back and reopen the variant form after a stale-data warning.
-6. Upload image: pick a JPEG, PNG, or WebP up to 5 MB. The app checks size/signature and the
+6. For an existing product, use **Photos & stock** in the catalog list, then **Upload image**
+   for additional images or **Replace image**. Pick a JPEG, PNG, or WebP up to 5 MB. The app checks size/signature and the
    existing Storage bucket enforces MIME/size/admin insertion. The first image is the cover;
    multiple images can be viewed in the customer product gallery.
 7. Replace image uploads to a new unique object path and updates that image's catalog row.
    It never overwrites/deletes the previous object, so image paths saved on old orders remain valid.
    If upload succeeds but metadata saving fails, a public orphaned object can remain for owner
    cleanup; the app does not delete objects or automatically retry an uncertain upload.
+   If a cover-photo upload fails while saving Add/Edit product, the product stays saved and a
+   message directs you to Photos & stock to inspect/retry the photo without creating another product.
+   If the picker reports it is not loaded, fully stop/restart Flutter to register the plugin.
 8. Edit details / visibility → Published when ready. Ensure the category and at least one
    variant are active. Publishing without an available active variant leaves no purchasable option.
 9. Leave the admin panel. The shopping catalog and cart reload so names, images, prices, and stock
