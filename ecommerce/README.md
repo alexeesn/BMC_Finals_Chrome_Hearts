@@ -6,7 +6,9 @@ account role display, persistent cart, saved delivery addresses, Buy Now, and ch
 Apply `supabase/migrations/0005_checkout_quote.sql` before testing checkout review.
 Place Order, external Xendit test payment, and My orders are also implemented locally.
 Follow [payment setup/checkpoints](../docs/PAYMENT_TEST.md) before your first test payment.
-Actual hosted verification and admin management remain pending.
+The admin panel is implemented locally; apply migration 0006 and follow
+[admin setup/checkpoints](../docs/ADMIN_SETUP.md) for catalog/images/stock and fulfillment.
+Hosted/device admin verification and release validation remain pending.
 
 From this folder:
 

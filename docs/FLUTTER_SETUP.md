@@ -9,7 +9,9 @@ is provisional. Seed products/prices remain fictional samples.
 Persistent cart, saved delivery addresses, Buy Now, and checkout review are implemented locally.
 Place Order, canonical order details, external hosted test payment, and My orders are implemented locally.
 Follow [Payment setup and demo checkpoints](PAYMENT_TEST.md) before submitting the first test order.
-Real provider/browser verification and admin management remain pending.
+The user has reported a successful test payment with Paid in the app. The admin panel is also
+implemented locally; follow [admin setup/checkpoints](ADMIN_SETUP.md), including migration 0006.
+Remaining hosted/device and release checks are tracked in PROJECT_STATUS.md.
 An admin role label does not imply that admin management screens are implemented.
 
 ## Run on your computer

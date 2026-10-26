@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import '../models/catalog.dart';
 
 class ProductArt extends StatelessWidget {
-  const ProductArt({super.key, required this.product});
+  const ProductArt({super.key, required this.product, this.imageUrl});
   final CatalogProduct product;
+  final String? imageUrl;
   @override
   Widget build(BuildContext context) {
     final fallback = LayoutBuilder(
@@ -51,9 +52,9 @@ class ProductArt extends StatelessWidget {
         );
       },
     );
-    if (product.imageUrls.isEmpty) return fallback;
+    if (product.imageUrls.isEmpty && imageUrl == null) return fallback;
     return Image.network(
-      product.imageUrls.first,
+      imageUrl ?? product.imageUrls.first,
       fit: BoxFit.cover,
       width: double.infinity,
       height: double.infinity,

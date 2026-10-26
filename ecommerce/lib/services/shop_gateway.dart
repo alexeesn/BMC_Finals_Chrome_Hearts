@@ -6,6 +6,8 @@ import '../models/checkout.dart';
 import '../models/order.dart';
 import 'checkout_attempt_store.dart';
 import 'order_placement.dart';
+import 'admin_gateway.dart';
+import 'supabase_admin_gateway.dart';
 
 class ShopIdentity {
   const ShopIdentity(this.id, this.email);
@@ -20,6 +22,8 @@ class ShopAccount {
 }
 
 abstract class ShopGateway implements OrderGateway {
+  AdminGateway get admin =>
+      throw UnsupportedError('Admin service is not configured.');
   ShopIdentity? get currentUser;
   @override
   String? get orderUserId => currentUser?.id;
@@ -50,6 +54,8 @@ abstract class ShopGateway implements OrderGateway {
 class SupabaseShopGateway extends ShopGateway {
   SupabaseShopGateway(this.client);
   final SupabaseClient client;
+  @override
+  late final AdminGateway admin = SupabaseAdminGateway(client);
   final _attempts = CheckoutAttemptStore();
   @override
   ShopIdentity? get currentUser {
@@ -68,7 +74,7 @@ class SupabaseShopGateway extends ShopGateway {
           .from('products')
           .select(
             'id,name,description,categories!inner(name,is_active),'
-            'product_images(storage_path,sort_order)',
+            'product_images(id,storage_path,sort_order)',
           )
           .eq('is_active', true)
           .eq('categories.is_active', true)
@@ -87,10 +93,15 @@ class SupabaseShopGateway extends ShopGateway {
     }
     return results[0].map((row) {
       final images =
-          List<Map<String, dynamic>>.from(row['product_images'] as List)..sort(
-            (a, b) =>
-                (a['sort_order'] as num).compareTo(b['sort_order'] as num),
-          );
+          List<Map<String, dynamic>>.from(row['product_images'] as List)
+            ..sort((a, b) {
+              final order = (a['sort_order'] as num).compareTo(
+                b['sort_order'] as num,
+              );
+              return order != 0
+                  ? order
+                  : (a['id'] as String).compareTo(b['id'] as String);
+            });
       return CatalogProduct(
         id: row['id'] as String,
         name: row['name'] as String,
@@ -355,10 +366,7 @@ class SupabaseShopGateway extends ShopGateway {
   Future<void> clearCheckoutAttempt(String expectedKey) =>
       _attempts.clear(_requireUser(), expectedKey);
 
-  static const _orderFields =
-      'id,user_id,order_number,idempotency_key,payment_status,fulfillment_status,'
-      'subtotal_minor,shipping_minor,total_minor,created_at,expires_at,delivery_address,'
-      'order_items(product_name,option_label,quantity,unit_price_minor,line_total_minor)';
+  static const _orderFields = orderSelectFields;
 
   @override
   Future<ShopOrder?> findOrderByCheckoutKey(String key) async {

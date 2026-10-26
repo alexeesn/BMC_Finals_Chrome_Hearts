@@ -1,6 +1,6 @@
 # Screen map and layout plan
 
-Status: the user accepted the four-screen dark-theme preview as the layout baseline. Behavioral details below remain implementation planning; these screens do not exist in Flutter yet. Sample products, prices, addresses, shipping fee, and branding are still placeholders.
+Status: the accepted four-screen dark preview remains the visual baseline. Customer shopping/auth/payment/history and the shared-app admin panel are now locally implemented; see PROJECT_STATUS.md for user-reported versus tested checkpoints. This document retains the original layout proposal. Sample catalog/branding and final styling remain open.
 
 Preview: [Open the shopping flow](previews/shopping-flow.html). Open the HTML file in a browser; no server, account, or installation is needed. The preview uses fictional products, prices, stock, addresses, and a sample shipping fee. It has no persistence or payment connection.
 

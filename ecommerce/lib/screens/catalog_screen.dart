@@ -12,10 +12,12 @@ class CatalogScreen extends StatefulWidget {
     required this.gateway,
     required this.cart,
     required this.onViewCart,
+    this.refreshToken = 0,
   });
   final ShopGateway gateway;
   final CartController cart;
   final VoidCallback onViewCart;
+  final int refreshToken;
   @override
   State<CatalogScreen> createState() => _CatalogScreenState();
 }
@@ -34,6 +36,14 @@ class _CatalogScreenState extends State<CatalogScreen> {
   void dispose() {
     _search.dispose();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant CatalogScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.refreshToken != oldWidget.refreshToken) {
+      _catalog = widget.gateway.loadCatalog();
+    }
   }
 
   Future<void> _reload() async {

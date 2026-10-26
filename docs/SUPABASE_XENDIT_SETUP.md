@@ -68,6 +68,7 @@ Hindi database connection string ang ibibigay sa Xendit. Public HTTPS Edge Funct
    - [0003_business_functions.sql](../supabase/migrations/0003_business_functions.sql) — checkout, stock, payments, addresses, at fulfillment.
    - [0004_storage.sql](../supabase/migrations/0004_storage.sql) — product image bucket/policy.
    - [0005_checkout_quote.sql](../supabase/migrations/0005_checkout_quote.sql) — signed-in, read-only checkout review using server prices, shipping, stock, and owned addresses/cart. If 0001–0004 are already complete, run only this new file.
+   - [0006_admin_variant_concurrency.sql](../supabase/migrations/0006_admin_variant_concurrency.sql) — checked admin variant/stock saves that reject a stale form after stock changes. Existing projects with 0001–0005 applied run only 0006 for the admin stage.
 3. Run one migration at a time. Kapag may error, itigil muna ang susunod na file at itama ang exact error; huwag basta ulit-ulitin lahat sa existing database.
 4. Run [seed.sql](../supabase/seed.sql) para sa fictional demo catalog. Sample shipping fee ay PHP 150, configurable sa `shop_settings.shipping_fee_minor` as `15000` centavos.
 5. Run [setup/verify.sql](../supabase/setup/verify.sql). Isang result table ang lalabas: six checks, all with status `OK` for the unmodified seed. Counts: 14 tables, 14 with RLS enabled, 3 demo products, 7 variants, 1 configured `product-images` bucket, and 1 PHP/PH settings row. Isa sa variants ay zero stock.
@@ -86,6 +87,11 @@ Hindi database connection string ang ibibigay sa Xendit. Public HTTPS Edge Funct
 5. Sa Storage, i-check ang `product-images` bucket. Upload JPEG/PNG/WebP files, up to 5 MB, under new unique paths. Admin uploads are allowed; overwrite/delete remains owner-only sa initial package para hindi mawala ang order-linked images. Seeded image rows are empty until actual photos are supplied.
 
 **Checkpoint:** customer at admin roles are distinct, may sample images, at customer cannot grant admin access. [Storage bucket setup](https://supabase.com/docs/guides/storage/buckets/creating-buckets).
+
+The Flutter admin panel is now implemented. Follow [admin setup/checkpoints](ADMIN_SETUP.md)
+for category/product editing, immutable image uploads/replacements, checked variant/stock saves,
+and paid Preparing → Shipped → Delivered fulfillment. It uses the existing admin account and
+backend policies; no new privileged key is needed.
 
 ## Step 5 — Ihanda ang Xendit Test Mode
 

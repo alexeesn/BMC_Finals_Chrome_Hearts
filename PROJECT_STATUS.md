@@ -4,7 +4,7 @@ Last updated: 2026-10-26 (Asia/Singapore).
 
 ## Current phase
 
-The user reported completing a Xendit test payment and explicitly confirmed Paid in the app. Treat the first end-to-end payment as user-reported successful, without independently inspected provider/database records. The hosted return page showed HTML source because Supabase rewrites default-host HTML responses to text/plain; fixed the local handler to send readable plain text. Next: update only the deployed payment-return bundle (JWT OFF), verify the message without paying again, then proceed to the admin milestone or remaining stock/cart/expiry checks.
+The user moved on after the return-page update instructions and requested the next task. Implemented the shared-app admin panel locally: overview, catalog/categories, draft/archive visibility, image uploads/replacements/gallery, checked variant/stock saves, store orders, and paid fulfillment. Next: guide only migration 0006, then a full app restart and Account → Admin panel checks. file_selector is present in the local package config. Dart/pure checks and full database/security/concurrency tests pass; widget tests and release/device admin validation remain unverified.
 
 ## Completed
 
@@ -88,11 +88,23 @@ The user reported completing a Xendit test payment and explicitly confirmed Paid
 - The user saw raw HTML on payment-return. Verified official Supabase documentation: default Edge GET text/html responses are rewritten to text/plain. Changed handleReturn to intentionally return readable UTF-8 plain text, retaining no-store/nosniff and no payment-state writes/claims. Success/cancel messages remain distinct. No custom domain or other hosting is required.
 - Regenerated dashboard bundles and strengthened the return-handler regression. All 30 Node handler tests passed, and the generated payment-return bundle passed a Node syntax check. This patch changes no SQL or Flutter code. Only payment-return needs redeployment for this display fix; do not re-pay or modify the paid order to test it.
 
+
+- After the payment-return instructions, the user said "oks na ano na next task mo". Proceeded with the planned admin milestone; return update is generally user-reported done without independently inspected hosted output.
+- Added Account → Admin panel for server-assigned admins and AdminGuard on admin routes. A separate repository checks the current role before admin reads/writes; database RLS/RPC/Storage policies independently enforce access. No role editor or privileged client key was added.
+- Implemented exact overview counts, catalog search, category add/edit/archive/order, product add/edit/draft/publish/archive, variant PHP price/stock/availability, store order filtering/30-row pagination/details, and paid Preparing → Shipped → Delivered fulfillment. Payment state remains backend-owned.
+- Added file_selector 1.1.0 for JPEG/PNG/WebP uploads/replacement up to 5 MB. Unique paths/upsert false retain old order-linked objects. Size/signature/MIME are checked; metadata failure can leave an orphan for owner cleanup. Customer gallery and deterministic cover ordering are included, and catalog/cart reload after leaving admin.
+- Asked the user to run flutter pub get because the picker was initially absent from the readable cache. Subsequently observed file_selector and platform packages in the package config/cache/plugin registrants; analysis resolves them. No SDK permissions or settings were changed by the assistant.
+- Added 0006_admin_variant_concurrency.sql: the admin app uses a locked, exact-updated_at checked save, rejecting stale stock/price forms with SQLSTATE 40001. Reserved-stock floors remain enforced. This prevents stale forms from restoring stock reserved/consumed after form load. No new tables are required; hosted 0006 is pending.
+- Extended real PostgreSQL tests for admin/customer permissions, catalog archive visibility, purchased item name/price snapshots, customer-visible fulfillment, and stale admin writes after both reservation and completed payment in separate connections. Full suite passed with six migrations, original checkout/security checks, stock races, and 30 mocked handler tests. Latest logs: bmc-ecom-test-hL8Dsw; disposable server stopped.
+- Added standalone admin checks for exact PHP input, image signatures/limits, reserved availability, exact timestamps, and forward paid fulfillment. Both admin and existing order/recovery pure-Dart scripts passed. Dart analysis reports No issues found.
+- Added three widget cases for customer denial, account-switch hiding, and forward fulfillment. The widget file has 23 cases plus nine generated placeholder cases in product_art_test.dart. Widget execution remains blocked by C:\\flutter\\bin\\cache\\lockfile; device, native picker/Storage upload, and release builds remain unverified.
+- Added docs/ADMIN_SETUP.md and updated setup/backend/Flutter guides. Admin catalog lists up to 1,000 records per entity; store orders are paginated. No hosted deployments, actual catalog/order writes, Git commits, or pushes were performed by the assistant.
+
 ## Observed codebase
 
 - `ecommerce/lib/main.dart` initializes Supabase through a retryable startup screen; `app.dart` defines the dark theme and Collection/Account navigation.
 - `ecommerce/lib/screens/` contains catalog/details, auth/account, cart/addresses, checkout/Place Order, and order details/history. Gateway reads canonical order/payment summaries and calls the payment endpoint. `order_placement.dart` and `checkout_attempt_store.dart` handle frozen requests/recovery without treating local preferences as payment authority.
-- `ecommerce/test/widget_test.dart` contains twenty model/controller/widget cases; `test/product_art_test.dart` adds nine layout cases. `test/order_model_checks.dart` is an executable pure-Dart check script that passes without starting Flutter.
+- `ecommerce/test/widget_test.dart` has 23 model/controller/widget cases; `test/product_art_test.dart` adds nine generated layout cases. Standalone order_model_checks.dart and admin_model_checks.dart pass without Flutter engine startup.
 - `ecommerce/pubspec.yaml` includes Supabase, URL launcher, shared preferences, and UUID dependencies; no WebView plugin was introduced. Hosted test payment opens in the device browser/new web tab.
 - The app has Android, iOS, web, Windows, macOS, and Linux folders. Final delivery targets still need confirmation.
 - `ecommerce/README.md` links the actual app setup/checkpoints.
@@ -102,7 +114,7 @@ Backend, Flutter foundation, cart/addresses, and checkout review are implemented
 
 ## Immediate next step
 
-Guide Supabase → Edge Functions → payment-return → Code: paste the entire current `supabase/dashboard/payment-return/index.ts`, Deploy updates, keep JWT OFF. Open the existing return URL with `?result=success` directly to verify readable text; there is no need for another payment. The user has explicitly confirmed Paid in the app. Then move to admin catalog/image/stock/fulfillment implementation if requested; retain pending checks for cart cleanup, one-time stock consumption, duplicate delivery, unpaid expiry, and two-customer isolation. Do not claim those individual checks passed from the paid result alone.
+Guide `supabase/migrations/0006_admin_variant_concurrency.sql` in SQL Editor → New Query, paste all and Run. Do not rerun 0001–0005/seed or change payment secrets/functions. Then fully stop/restart the app with `flutter run -d edge --web-port 63594` so the image plugin is registered and the allowed origin/session is preserved. file_selector is already observed installed; run `flutter pub get` only if needed. Sign in with the existing admin account and open Account → Admin panel. Follow `docs/ADMIN_SETUP.md`: category/product drafts, variant/price/stock, image upload, publish, storefront refresh, and paid fulfillment visible in customer history. Hosted 0006 and actual UI/upload are not yet verified.
 
 Before relying on the worker/real checkout, use the current generated bundles for `reconcile-payments` and `create-payment`; they include session-ID response compatibility too. Their previous deployment instructions were supplied but their runtime results were not verified.
 
@@ -114,7 +126,7 @@ The `supabase/setup/verify.sql` checkpoint is now explicitly user-reported all s
 
 Then follow the full guide for Auth/admin setup, Xendit Test Mode secrets, browser-editor function deployment, webhook registration, and Cron/Vault worker configuration. Actual project/account access remains unverified. Do not claim connection success until the hosted checks and a genuine test transaction pass.
 
-Flutter foundation, overflow fix, and checkout review are user-reported good. Shopping/payment/history UI is implemented locally, awaiting the deployment/configuration and first PAY checkpoint. The next app implementation milestone after that is admin catalog/image/stock/fulfillment management. Continue using the existing Flutter app and accepted dark layout.
+Flutter foundation, overflow fix, checkout review, and one Paid test payment are user-reported good. The admin milestone is locally implemented, awaiting 0006 deployment and device checks. Next after admin checks: remaining cart/stock/expiry/customer-isolation regression, UI/assets, and Android release validation.
 
 Keep the one-store Android app, shared customer/admin app, and fixed shipping fee as proposals until confirmed through discussion or an implementation request. The user has confirmed the dark-theme direction; the final font, shop name, and product imagery remain open.
 

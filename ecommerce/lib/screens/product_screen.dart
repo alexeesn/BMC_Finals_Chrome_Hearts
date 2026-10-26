@@ -25,6 +25,7 @@ class ProductScreen extends StatefulWidget {
 class _ProductScreenState extends State<ProductScreen> {
   CatalogVariant? _selected;
   int _quantity = 1;
+  int _imageIndex = 0;
   bool _saving = false;
   bool _buying = false;
 
@@ -84,9 +85,53 @@ class _ProductScreenState extends State<ProductScreen> {
                 aspectRatio: 1.15,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(16),
-                  child: ProductArt(product: product),
+                  child: ProductArt(
+                    product: product,
+                    imageUrl: product.imageUrls.isEmpty
+                        ? null
+                        : product.imageUrls[_imageIndex],
+                  ),
                 ),
               ),
+              if (product.imageUrls.length > 1)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: product.imageUrls
+                        .asMap()
+                        .entries
+                        .map(
+                          (entry) => Semantics(
+                            button: true,
+                            selected: _imageIndex == entry.key,
+                            label: 'View product image ${entry.key + 1}',
+                            child: InkWell(
+                              onTap: () =>
+                                  setState(() => _imageIndex = entry.key),
+                              child: Container(
+                                width: 60,
+                                height: 68,
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: _imageIndex == entry.key
+                                        ? Theme.of(context).colorScheme.primary
+                                        : Colors.transparent,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: ProductArt(
+                                  product: product,
+                                  imageUrl: entry.value,
+                                ),
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ),
               const SizedBox(height: 24),
               Text(
                 product.category.toUpperCase(),

@@ -78,6 +78,7 @@ class ShopShell extends StatefulWidget {
 
 class _ShopShellState extends State<ShopShell> {
   int _tab = 0;
+  int _catalogVersion = 0;
   late final _cart = CartController(widget.gateway);
   @override
   void dispose() {
@@ -94,9 +95,17 @@ class _ShopShellState extends State<ShopShell> {
           gateway: widget.gateway,
           cart: _cart,
           onViewCart: () => setState(() => _tab = 1),
+          refreshToken: _catalogVersion,
         ),
         CartScreen(cart: _cart),
-        AccountScreen(gateway: widget.gateway, onOrdersClosed: _cart.refresh),
+        AccountScreen(
+          gateway: widget.gateway,
+          onOrdersClosed: _cart.refresh,
+          onAdminClosed: () async {
+            if (mounted) setState(() => _catalogVersion++);
+            await _cart.refresh();
+          },
+        ),
       ],
     ),
     bottomNavigationBar: NavigationBar(

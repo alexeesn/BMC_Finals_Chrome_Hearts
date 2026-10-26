@@ -6,11 +6,19 @@ import '../services/shop_gateway.dart';
 import 'auth_screen.dart';
 import 'addresses_screen.dart';
 import 'orders_screen.dart';
+import 'admin/admin_guard.dart';
+import 'admin/admin_screen.dart';
 
 class AccountScreen extends StatefulWidget {
-  const AccountScreen({super.key, required this.gateway, this.onOrdersClosed});
+  const AccountScreen({
+    super.key,
+    required this.gateway,
+    this.onOrdersClosed,
+    this.onAdminClosed,
+  });
   final ShopGateway gateway;
   final Future<void> Function()? onOrdersClosed;
+  final Future<void> Function()? onAdminClosed;
   @override
   State<AccountScreen> createState() => _AccountScreenState();
 }
@@ -172,6 +180,23 @@ class _AccountScreenState extends State<AccountScreen> {
                             ),
                           ],
                         ),
+                        if (account.isAdmin)
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(
+                              Icons.admin_panel_settings_outlined,
+                            ),
+                            title: const Text('Admin panel'),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () async {
+                              await openAdminPage<void>(
+                                context,
+                                widget.gateway,
+                                (_) => AdminScreen(shop: widget.gateway),
+                              );
+                              await widget.onAdminClosed?.call();
+                            },
+                          ),
                       ],
                     ),
                   ),

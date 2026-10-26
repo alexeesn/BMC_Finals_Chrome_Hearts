@@ -5,6 +5,11 @@ import 'package:ecommerce/models/catalog.dart';
 import 'package:ecommerce/models/shopping.dart';
 import 'package:ecommerce/models/checkout.dart';
 import 'package:ecommerce/models/order.dart';
+import 'package:ecommerce/models/admin.dart';
+import 'package:ecommerce/services/admin_gateway.dart';
+import 'package:ecommerce/screens/admin/admin_guard.dart';
+import 'package:ecommerce/screens/admin/admin_screen.dart';
+import 'package:ecommerce/screens/admin/admin_orders_screen.dart';
 import 'package:ecommerce/services/order_placement.dart';
 import 'package:ecommerce/screens/orders_screen.dart';
 import 'package:ecommerce/screens/checkout_screen.dart';
@@ -90,6 +95,9 @@ ShopOrder demoOrder(
 );
 
 class FakeShop extends ShopGateway {
+  AdminGateway? adminService;
+  @override
+  AdminGateway get admin => adminService ?? super.admin;
   final events = StreamController<void>.broadcast();
   ShopIdentity? identity;
   bool catalogFails = false;
@@ -301,10 +309,139 @@ Future<void> showShop(WidgetTester tester, FakeShop shop) async {
   await tester.pumpWidget(MyApp(gateway: shop));
 }
 
+class FakeAdmin implements AdminGateway {
+  int statsCalls = 0;
+  ShopOrder? order;
+  final updates = <String>[];
+  @override
+  Future<AdminStats> loadStats() async {
+    statsCalls++;
+    return const AdminStats(0, 1, 1, 0);
+  }
+
+  @override
+  Future<AdminCatalog> loadCatalog() async =>
+      const AdminCatalog(categories: [], products: [], variants: []);
+  @override
+  Future<List<ShopOrder>> loadOrders({
+    required int offset,
+    String? paymentStatus,
+  }) async => order == null ? [] : [order!];
+  @override
+  Future<ShopOrder> loadOrder(String id) async => order!;
+  @override
+  Future<void> updateFulfillment(String id, String status) async {
+    final previous = order!;
+    if (nextFulfillment(previous.paymentStatus, previous.fulfillmentStatus) !=
+        status) {
+      throw const ShoppingException('Invalid transition');
+    }
+    updates.add(status);
+    order = ShopOrder(
+      id: previous.id,
+      ownerId: previous.ownerId,
+      number: previous.number,
+      checkoutKey: previous.checkoutKey,
+      paymentStatus: previous.paymentStatus,
+      fulfillmentStatus: status,
+      paymentState: previous.paymentState,
+      subtotalMinor: previous.subtotalMinor,
+      shippingMinor: previous.shippingMinor,
+      totalMinor: previous.totalMinor,
+      createdAt: previous.createdAt,
+      expiresAt: previous.expiresAt,
+      address: previous.address,
+      items: previous.items,
+    );
+  }
+
+  @override
+  Future<void> saveCategory(AdminCategory category) async {}
+  @override
+  Future<void> saveProduct(AdminProduct product) async {}
+  @override
+  Future<void> saveVariant(AdminVariant variant) async {}
+  @override
+  Future<void> uploadImage(
+    String productId,
+    UploadImage image,
+    int sortOrder, {
+    AdminImage? replacing,
+  }) async {}
+}
+
 void main() {
   late FakeShop shop;
   setUp(() => shop = FakeShop());
   tearDown(() => shop.events.close());
+
+  testWidgets('Customer cannot open an admin page or load store stats', (
+    tester,
+  ) async {
+    shop.identity = const ShopIdentity('customer', 'customer@example.com');
+    final admin = FakeAdmin();
+    shop.adminService = admin;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminGuard(
+          shop: shop,
+          builder: (_) => AdminScreen(shop: shop),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Admin access is required.'), findsOneWidget);
+    expect(admin.statsCalls, 0);
+  });
+
+  testWidgets('Switching away from admin hides the privileged screen', (
+    tester,
+  ) async {
+    shop.identity = const ShopIdentity('admin', 'owner@example.com');
+    shop.adminService = FakeAdmin();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminGuard(
+          shop: shop,
+          builder: (_) => AdminScreen(shop: shop),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Store overview'), findsOneWidget);
+    shop.identity = const ShopIdentity('customer', 'customer@example.com');
+    shop.events.add(null);
+    await tester.pumpAndSettle();
+    expect(find.text('Store overview'), findsNothing);
+    expect(find.text('Admin access is required.'), findsOneWidget);
+  });
+
+  testWidgets(
+    'Admin advances paid fulfillment without changing payment status',
+    (tester) async {
+      shop.identity = const ShopIdentity('admin', 'owner@example.com');
+      final admin = FakeAdmin()
+        ..order = demoOrder('fulfilled', status: 'paid', state: 'paid');
+      shop.adminService = admin;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AdminOrderScreen(shop: shop, orderId: admin.order!.id),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final ship = find.text('Mark as shipped');
+      await tester.ensureVisible(ship);
+      await tester.tap(ship);
+      await tester.pumpAndSettle();
+      final deliver = find.text('Mark as delivered');
+      await tester.ensureVisible(deliver);
+      await tester.tap(deliver);
+      await tester.pumpAndSettle();
+      expect(admin.updates, ['shipped', 'delivered']);
+      expect(admin.order!.paymentStatus, 'paid');
+      expect(find.text('This order has been delivered.'), findsOneWidget);
+    },
+  );
 
   CheckoutAttempt attempt(String key) => CheckoutAttempt(
     key: key,

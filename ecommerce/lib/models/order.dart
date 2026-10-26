@@ -1,6 +1,11 @@
 import 'checkout.dart';
 import 'shopping.dart';
 
+const orderSelectFields =
+    'id,user_id,order_number,idempotency_key,payment_status,fulfillment_status,'
+    'subtotal_minor,shipping_minor,total_minor,created_at,expires_at,delivery_address,'
+    'order_items(product_name,option_label,quantity,unit_price_minor,line_total_minor)';
+
 class CheckoutAttempt {
   const CheckoutAttempt({
     required this.key,

@@ -5,6 +5,7 @@ Start with [the step-by-step setup guide](../docs/SUPABASE_XENDIT_SETUP.md). The
 ## What to use
 
 - `migrations/0001_schema.sql` through `0005_checkout_quote.sql`: run once, in order, on the intended clean Supabase project. If 0001–0004 are already applied, run only 0005 for the new read-only checkout review; do not rerun the earlier migrations.
+- `migrations/0006_admin_variant_concurrency.sql`: add after 0005 for the admin app's checked stock/price saves. See [admin setup](../docs/ADMIN_SETUP.md); existing projects run only this new migration.
 - `seed.sql`: fictional demo catalog; safe to repeat without overwriting existing seeded records.
 - `setup/verify.sql`: read-only database/bucket checks.
 - `setup/promote-admin.sql`: owner-run admin promotion after replacing the placeholder UUID.

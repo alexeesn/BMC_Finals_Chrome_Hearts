@@ -43,6 +43,10 @@ do $$ begin
   begin perform * from public.product_variants; raise exception 'internal stock read should fail'; exception when insufficient_privilege then null; end;
   begin perform public.ecom_reconcile_candidates(); raise exception 'backend RPC should fail'; exception when insufficient_privilege then null; end;
   begin perform public.admin_variants(); raise exception 'admin RPC should fail'; exception when insufficient_privilege then null; end;
+  begin perform public.admin_save_variant_checked(null,'20000000-0000-4000-8000-000000000001','FORGED','Forged',100,1,true,null);
+    raise exception 'customer checked variant save should fail'; exception when insufficient_privilege then null; end;
+  begin insert into public.categories(name,slug) values('Forged','customer-forged');
+    raise exception 'customer category insert should fail'; exception when insufficient_privilege then null; end;
   begin perform public.set_default_address('b0000000-0000-4000-8000-000000000002'); raise exception 'other address should fail'; exception when insufficient_privilege then null; end;
   begin insert into storage.objects(bucket_id,name) values('product-images','forbidden.png'); raise exception 'customer upload should fail'; exception when insufficient_privilege then null; end;
 end $$;
@@ -100,6 +104,22 @@ do $$ begin
   begin perform public.admin_update_fulfillment((select id from public.orders limit 1),'preparing'); raise exception 'backward fulfillment should fail'; exception when invalid_parameter_value then null; end;
 end $$;
 insert into storage.objects(bucket_id,name) values('product-images','admin-versioned.png');
+update public.products set name='Renamed catalog tee' where id='20000000-0000-4000-8000-000000000001';
+select public.admin_save_variant_checked('30000000-0000-4000-8000-000000000002','20000000-0000-4000-8000-000000000001',
+  'DEMO-TEE-M','M',1300000,4,true,
+  (select updated_at from public.admin_variants() where id='30000000-0000-4000-8000-000000000002'));
+select pg_temp.expect((select product_name='Archive Tee' and unit_price_minor=1200000
+  from public.order_items where order_id=:'order_one'),'admin catalog edits preserve purchased item snapshots');
+insert into public.categories(id,name,slug) values('90000000-0000-4000-8000-000000000001','Admin demo','admin-demo');
+insert into public.products(id,category_id,name,slug) values('90000000-0000-4000-8000-000000000002',
+  '90000000-0000-4000-8000-000000000001','Admin product','admin-product');
+insert into public.product_images(product_id,storage_path) values('90000000-0000-4000-8000-000000000002','admin-versioned.png');
+select public.admin_save_variant_checked(null,'90000000-0000-4000-8000-000000000002','ADMIN-DEMO','One size',12345,2,true,null) as admin_variant \gset
+select pg_temp.expect(exists(select 1 from public.admin_variants() where id=:'admin_variant'),'admin sees internal variant');
+update public.products set is_active=false where id='90000000-0000-4000-8000-000000000002';
+set local request.jwt.claim.sub='a0000000-0000-4000-8000-000000000001';
+select pg_temp.expect((select fulfillment_status='delivered' from public.orders where id=:'order_one'),'customer sees admin fulfillment');
+select pg_temp.expect(not exists(select 1 from public.catalog_variants where id=:'admin_variant'),'archived product hidden from shopper');
 reset role;
 
 -- Changed cart rows survive payment cleanup; matching rows are removed.

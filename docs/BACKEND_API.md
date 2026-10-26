@@ -83,9 +83,15 @@ Admin-only authenticated RPCs:
 
 - `admin_variants()`: list internal variant/stock records.
 - `admin_save_variant(p_id,p_product,p_sku,p_option,p_price,p_stock,p_active)`: pass null `p_id` for a new variant. `p_price` is centavos; stock cannot fall below active reservations.
+- `admin_save_variant_checked(p_id,p_product,p_sku,p_option,p_price,p_stock,p_active,p_expected_updated_at)` (migration 0006): the admin app uses this wrapper. Existing variants require the exact `updated_at` string read when the form loaded; the wrapper locks the row and rejects stale data with SQLSTATE 40001 before applying any stock/price write. New variants pass null ID/timestamp.
 - `admin_update_fulfillment(p_order,p_status)`: paid orders only, Preparing → Shipped → Delivered, with safe repeated same-state calls.
 
 Admins can add/edit products/categories/image metadata under RLS. Archive catalog entries using `is_active`; no customer-facing hard-delete operations are provided. Image files are uploaded to new paths. Role promotion remains an owner action through the setup script.
+
+The Flutter admin repository checks the current role before reads/mutations; database RLS/RPC/Storage
+policies enforce it independently. Store order reads are separate from the customer-filtered gateway.
+Uploads use `uploadBinary` with MIME/signature/5 MB checks and `upsert: false`; replacements retain old
+objects for order-linked image paths. A failed metadata link can leave an orphan object for owner cleanup.
 
 ## Callback processing
 
