@@ -57,6 +57,7 @@ abstract class _FormState<T extends StatefulWidget> extends State<T> {
       ),
       bottomNavigationBar: SafeArea(
         child: Center(
+          heightFactor: 1,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 640),
             child: Padding(

@@ -73,6 +73,23 @@ Archive catalog records instead of hard deleting products or order-linked files.
 5. Pending, expired, cancelled, and needs-review orders have no fulfillment action. Payment status
    remains governed by verified Xendit processing and the reconciliation worker.
 
+### Current demo checkpoint: Shipped → Delivered
+
+Use the existing Paid test order and note its order number. No new payment or SQL is needed.
+
+1. Account → Admin panel → Orders → set Payment status to **Paid**.
+2. Open that order number. Expect payment **Paid** and fulfillment `preparing`.
+3. Tap **Mark as shipped**. Expect `Fulfillment: shipped` while payment stays **Paid**.
+4. Return to Account → My orders → open the same order → tap the top-right refresh icon.
+   Expect `Delivery: shipped`. For another customer's order, check it using that customer's account.
+5. Return to the admin order → tap **Mark as delivered**. Expect `Fulfillment: delivered`.
+6. Refresh the same customer order again. Expect `Delivery: delivered` and payment **Paid**.
+   The delivered admin order should no longer offer a next fulfillment action.
+
+If the expected button is absent, inspect the payment and fulfillment labels first. An already
+delivered order has completed this flow. If saving fails, keep the order number and exact error
+message for diagnosis. Actual hosted fulfillment results remain pending user confirmation.
+
 ## Verification
 
 ```powershell

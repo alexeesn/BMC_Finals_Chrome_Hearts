@@ -4,7 +4,7 @@ Last updated: 2026-10-26 (Asia/Singapore).
 
 ## Current phase
 
-The user reports admin access and product creation work. Photo upload was initially described as a picker problem, then clarified that no upload/photo control was visible in the form. Added Choose photo and preview directly to Add/Edit product, plus a visible Photos & stock catalog action. Save now stays fixed at the bottom of product/category/variant forms, so it remains visible while scrolling. Product save persists metadata before uploading/replacing the cover photo; a photo failure keeps the product and gives recovery guidance. Next: restart the existing Edge app and verify edit-save and actual photo selection/upload. No new SQL/dependencies are needed for these UI corrections; runtime verification remains pending.
+The user reported the edit Save correction is good and authorized proceeding to fulfillment. Existing admin and customer screens implement paid Preparing → Shipped → Delivered. The current checkpoint is to update the existing Paid test order from admin, then refresh that same order in customer My orders after each transition. A detailed walkthrough is in docs/ADMIN_SETUP.md. Actual hosted fulfillment remains unverified. Cover-photo selection/upload was implemented earlier but its saved storefront result still needs explicit confirmation. Also constrained the fixed Save footer to its content height so it preserves form space.
 
 ## Completed
 
@@ -109,6 +109,8 @@ The user reports admin access and product creation work. Photo upload was initia
 
 ## Observed codebase
 
+Latest fulfillment checkpoint preparation: whole-app Dart analysis and the standalone admin model checks pass, including paid forward transitions. git diff --check passes. Added the explicit existing-order demo walkthrough to docs/ADMIN_SETUP.md. Hosted Shipped/Delivered changes and customer visibility have not been performed by the assistant or confirmed by the user.
+
 - `ecommerce/lib/main.dart` initializes Supabase through a retryable startup screen; `app.dart` defines the dark theme and Collection/Account navigation.
 - `ecommerce/lib/screens/` contains catalog/details, auth/account, cart/addresses, checkout/Place Order, and order details/history. Gateway reads canonical order/payment summaries and calls the payment endpoint. `order_placement.dart` and `checkout_attempt_store.dart` handle frozen requests/recovery without treating local preferences as payment authority.
 - `ecommerce/test/widget_test.dart` has 23 model/controller/widget cases; `test/product_art_test.dart` adds nine generated layout cases. Standalone order_model_checks.dart and admin_model_checks.dart pass without Flutter engine startup.
@@ -121,7 +123,7 @@ Backend, Flutter foundation, cart/addresses, and checkout review are implemented
 
 ## Immediate next step
 
-Guide a full restart of the existing Edge app on port 63594, then Account → Admin panel → Catalog → Add product or Edit details. Choose photo is now visible near the top; select JPEG/PNG/WebP up to 5 MB, fill product fields, and Save. Existing products also have a Photos & stock action in the catalog list for Upload image/Replace image. Confirm preview, saved image, and storefront appearance; if the picker or upload actually errors, collect the exact message. No SQL reruns or dependency changes are needed. Continue to fulfillment/remaining release checks only after photos are verified.
+Account → Admin panel → Orders → Paid → existing Paid test order → Mark as shipped. Then Account → My orders → same order → top-right refresh: expect Delivery: shipped and Paid. Repeat with Mark as delivered and verify Delivery: delivered in My orders. No new checkout, SQL, or secrets are needed. After user confirms this checkpoint, continue saved product-photo/stock/cart/expiry/customer-isolation checks, then UI polish and Android release validation.
 
 Before relying on the worker/real checkout, use the current generated bundles for `reconcile-payments` and `create-payment`; they include session-ID response compatibility too. Their previous deployment instructions were supplied but their runtime results were not verified.
 
