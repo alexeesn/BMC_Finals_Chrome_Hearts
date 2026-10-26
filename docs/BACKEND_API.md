@@ -12,6 +12,21 @@ This describes the local implementation. Hosted deployment and real test-account
 
 ## Checkout request
 
+### Read-only review
+
+After applying `migrations/0005_checkout_quote.sql`, a signed-in client can call
+`quote_checkout(p_source, p_address, p_items)`. Source/items use the same shapes below,
+and `p_address` must belong to the authenticated caller. Client prices and cart quantities
+are ignored; the function reads active variants, availability, saved cart quantities,
+and server shipping. It returns `items`, `delivery_address`, `subtotal_minor`,
+`shipping_minor`, `total_minor`, `currency`, `source`, and `address_id`.
+
+This is a read-only estimate at the time of the query: it creates no order/payment,
+changes no cart rows, and holds no stock. Actual checkout must validate again.
+Changing addresses or selected items requires a fresh review. No privileged key is used.
+
+### Create the order and hosted payment
+
 Call `create-payment` through the signed-in Supabase client. It requires both the normal project client key and the customer's session JWT; a client key alone is not login.
 
 Buy Now body:

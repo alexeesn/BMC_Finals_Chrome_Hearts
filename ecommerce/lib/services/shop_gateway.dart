@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/catalog.dart';
 import '../models/shopping.dart';
+import '../models/checkout.dart';
 
 class ShopIdentity {
   const ShopIdentity(this.id, this.email);
@@ -33,6 +34,10 @@ abstract class ShopGateway {
   Future<void> saveAddress(DeliveryAddress address);
   Future<void> deleteAddress(String id);
   Future<void> setDefaultAddress(String id);
+  Future<CheckoutQuote> quoteCheckout(
+    CheckoutSelection selection,
+    String addressId,
+  );
 }
 
 class SupabaseShopGateway implements ShopGateway {
@@ -306,5 +311,29 @@ class SupabaseShopGateway implements ShopGateway {
   Future<void> setDefaultAddress(String id) async {
     _requireUser();
     await client.rpc('set_default_address', params: {'p_address': id});
+  }
+
+  @override
+  Future<CheckoutQuote> quoteCheckout(
+    CheckoutSelection selection,
+    String addressId,
+  ) async {
+    _requireUser();
+    try {
+      final result = await client.rpc(
+        'quote_checkout',
+        params: {
+          'p_source': selection.source,
+          'p_address': addressId,
+          'p_items': selection.items,
+        },
+      );
+      return CheckoutQuote.fromJson(Map<String, dynamic>.from(result as Map));
+    } on PostgrestException catch (error) {
+      if (error.code == '22023' || error.code == '42501') {
+        throw ShoppingException(error.message);
+      }
+      rethrow;
+    }
   }
 }

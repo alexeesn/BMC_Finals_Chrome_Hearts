@@ -53,7 +53,7 @@ Proposed main navigation: Home, Categories, Cart, Account.
 
 Detailed proposed layouts and screen states: [Screen plan](docs/SCREEN_PLAN.md).
 Offline interactive design preview: [Shopping flow](docs/previews/shopping-flow.html).
-The preview uses fictional data for review. The existing Flutter app implements dark catalog/details, auth/account, persistent cart, and saved delivery addresses using Supabase. Buy Now/checkout, payment/order screens, and admin management remain pending. See [Flutter setup](docs/FLUTTER_SETUP.md) for device checkpoints and current verification limits.
+The preview uses fictional data for review. The existing Flutter app implements dark catalog/details, auth/account, persistent cart, saved delivery addresses, Buy Now, and checkout review using Supabase. Review uses the new read-only `quote_checkout` RPC after migration 0005; it creates no orders/payments or stock holds. Actual payment submission/order screens and admin management remain pending. See [Flutter setup](docs/FLUTTER_SETUP.md) for device checkpoints and current verification limits.
 
 ### Shopping behavior
 

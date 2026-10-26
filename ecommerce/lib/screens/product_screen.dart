@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../models/catalog.dart';
+import '../models/checkout.dart';
+import 'checkout_screen.dart';
 import '../services/cart_controller.dart';
 import '../widgets/product_art.dart';
 import '../widgets/sign_in_prompt.dart';
@@ -24,6 +26,18 @@ class _ProductScreenState extends State<ProductScreen> {
   CatalogVariant? _selected;
   int _quantity = 1;
   bool _saving = false;
+  bool _buying = false;
+
+  Future<void> _buyNow() async {
+    if (_selected == null || _saving || _buying) return;
+    final selection = CheckoutSelection.buyNow(_selected!.id, _quantity);
+    setState(() => _buying = true);
+    try {
+      await openCheckout(context, widget.cart.gateway, selection);
+    } finally {
+      if (mounted) setState(() => _buying = false);
+    }
+  }
 
   Future<void> _add() async {
     if (_saving || _selected == null) return;
@@ -100,7 +114,8 @@ class _ProductScreenState extends State<ProductScreen> {
                           '${variant.label}${variant.availableStock == 0 ? ' · Sold out' : ''}',
                         ),
                         selected: _selected?.id == variant.id,
-                        onSelected: variant.availableStock <= 0 || _saving
+                        onSelected:
+                            variant.availableStock <= 0 || _saving || _buying
                             ? null
                             : (_) => setState(() {
                                 _selected = variant;
@@ -152,10 +167,26 @@ class _ProductScreenState extends State<ProductScreen> {
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: FilledButton.icon(
-            onPressed: _selected == null || _saving ? null : _add,
-            icon: const Icon(Icons.add_shopping_cart),
-            label: Text(_saving ? 'Adding…' : 'Add to cart'),
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _selected == null || _saving || _buying
+                      ? null
+                      : _add,
+                  child: Text(_saving ? 'Adding…' : 'Add to cart'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton(
+                  onPressed: _selected == null || _saving || _buying
+                      ? null
+                      : _buyNow,
+                  child: const Text('Buy Now'),
+                ),
+              ),
+            ],
           ),
         ),
       ),

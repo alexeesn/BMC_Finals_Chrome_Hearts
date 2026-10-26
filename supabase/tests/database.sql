@@ -21,7 +21,23 @@ select pg_temp.expect((select role='customer' from public.user_roles),'signup me
 select pg_temp.expect((select count(*)=1 from public.addresses),'address isolation');
 select pg_temp.expect((select count(*)=1 from public.cart_items),'own cart read');
 select public.set_default_address('b0000000-0000-4000-8000-000000000001');
+-- Read-only quote: server values and ownership, without stock/order side effects.
+select pg_temp.expect((public.quote_checkout('buy_now','b0000000-0000-4000-8000-000000000001',
+  '[{"variant_id":"30000000-0000-4000-8000-000000000002","quantity":2,"price_minor":1}]')->>'total_minor')::bigint=2415000,
+  'quote ignores client price and includes server shipping');
+select pg_temp.expect((public.quote_checkout('cart','b0000000-0000-4000-8000-000000000001',
+  '[{"cart_item_id":"c0000000-0000-4000-8000-000000000001","quantity":99}]')->'items'->0->>'quantity')::int=1,
+  'cart quote uses saved quantity');
 do $$ begin
+  begin perform public.quote_checkout('buy_now','b0000000-0000-4000-8000-000000000002',
+    '[{"variant_id":"30000000-0000-4000-8000-000000000002","quantity":1}]');
+    raise exception 'other address quote should fail'; exception when insufficient_privilege then null; end;
+  begin perform public.quote_checkout('buy_now','b0000000-0000-4000-8000-000000000001',
+    '[{"variant_id":"30000000-0000-4000-8000-000000000004","quantity":1}]');
+    raise exception 'zero stock quote should fail'; exception when invalid_parameter_value then null; end;
+  begin perform public.quote_checkout('cart','b0000000-0000-4000-8000-000000000001',
+    '[{"cart_item_id":"c0000000-0000-4000-8000-000000000001"},{"cart_item_id":"c0000000-0000-4000-8000-000000000001"}]');
+    raise exception 'duplicate cart quote should fail'; exception when invalid_parameter_value then null; end;
   begin update public.user_roles set role='admin'; raise exception 'role grant should fail'; exception when insufficient_privilege then null; end;
   begin insert into public.orders(user_id) values(auth.uid()); raise exception 'order write should fail'; exception when insufficient_privilege then null; end;
   begin perform * from public.product_variants; raise exception 'internal stock read should fail'; exception when insufficient_privilege then null; end;
@@ -30,7 +46,19 @@ do $$ begin
   begin perform public.set_default_address('b0000000-0000-4000-8000-000000000002'); raise exception 'other address should fail'; exception when insufficient_privilege then null; end;
   begin insert into storage.objects(bucket_id,name) values('product-images','forbidden.png'); raise exception 'customer upload should fail'; exception when insufficient_privilege then null; end;
 end $$;
+set local request.jwt.claim.sub='a0000000-0000-4000-8000-000000000002';
+do $$ begin
+  begin perform public.quote_checkout('cart','b0000000-0000-4000-8000-000000000002',
+    '[{"cart_item_id":"c0000000-0000-4000-8000-000000000001"}]');
+    raise exception 'other customer cart quote should fail'; exception when invalid_parameter_value then null; end;
+end $$;
+set local request.jwt.claim.sub='a0000000-0000-4000-8000-000000000001';
 reset role;
+select pg_temp.expect(not exists(select 1 from public.orders),'quote creates no orders');
+select pg_temp.expect(not exists(select 1 from public.payments),'quote creates no payments');
+select pg_temp.expect((select sum(stock_reserved)=0 from public.product_variants),'quote reserves no stock');
+select pg_temp.expect(not has_function_privilege('anon','public.quote_checkout(text,uuid,jsonb)','EXECUTE'),
+  'anonymous quote permission denied');
 
 -- Backend entry points are called with identity established by Edge Auth validation.
 set local role service_role;

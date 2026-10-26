@@ -6,8 +6,8 @@ catalog search/categories, product details, option selection, safe available-sto
 loading/error/retry states, and image fallbacks. The display name `CH / COLLECTION`
 is provisional. Seed products/prices remain fictional samples.
 
-Persistent cart and saved delivery addresses are also implemented locally. Buy Now,
-checkout/payment screens, orders, and admin management are next milestones.
+Persistent cart, saved delivery addresses, Buy Now, and checkout review are implemented locally.
+Order/payment submission, payment screens, order history, and admin management remain pending.
 An admin role label does not imply that admin management screens are implemented.
 
 ## Run on your computer
@@ -56,9 +56,30 @@ No additional SQL or package installation is needed for cart/addresses.
 8. Delete an address and confirm it disappears. Deleting the default can leave no default;
    an upcoming checkout must still require an explicit valid address.
 
-Cart subtotals are a review display. The trusted checkout will calculate final prices, shipping,
-and stock eligibility; the cart does not reserve stock. Buy Now/checkout and payment controls
-are not part of this cart/address checkpoint.
+Cart subtotals are a review display. The checkout review reads prices/shipping/stock from the
+backend; the actual order/payment operation will validate again. Cart and review do not reserve stock.
+
+## Buy Now and checkout review checkpoint
+
+1. In Supabase SQL Editor → New Query, paste the complete contents of
+   [0005_checkout_quote.sql](../supabase/migrations/0005_checkout_quote.sql) and Run.
+   This adds one authenticated read-only RPC. It does not add tables, seed products,
+   change existing policies, or create orders. Do not rerun 0001–0004.
+2. Hot restart the Flutter app (`R`), or run it again. No new dependencies were added.
+3. Product → choose an available option/quantity → Buy Now. Sign in if needed.
+4. Choose an owned saved address. If none exists, use Add / edit addresses, save one,
+   and return; the review reloads your list. Current/default address is selected initially.
+5. Check product, option, quantity, shipping, and total. The database supplies all amounts.
+   The demo fee is PHP 150 only while the hosted setting remains unchanged.
+6. Return to Cart: Buy Now must preserve saved cart rows/quantities.
+7. Select some cart rows → Checkout. Only the selected IDs are quoted; the backend obtains
+   their saved quantities. Unselected rows remain. At most 20 different lines per review.
+8. Switch address or refresh checkout and confirm the quote reloads. An unavailable item,
+   insufficient stock, or deleted address should stop the review with a useful error.
+9. Reaching this screen must not create an order/payment, reserve stock, or clear the cart.
+
+This stage implements order review. Xendit page opening/order submission is the next stage;
+there is no active Pay button yet. The existing Edge backend remains the payment authority.
 
 ## Public configuration
 
@@ -85,6 +106,9 @@ Widget tests cover catalog filtering, sold-out option selection, retry after a f
 form validation, login/logout and account switching, and signup requiring email confirmation.
 Additional tests cover cart merging/reopening, quantity/removal UI, stale cart reads after logout,
 rejected cart mutations, and address validation/saving. They remain unrun under the SDK restriction.
+Checkout tests additionally cover Buy Now preserving the cart, requiring an address before a quote,
+and selected-cart-only request payloads. Placeholder tests cover 64×76, 160×160, and 320×280
+at text scales 1/2/3; these Flutter tests are authored/analyzed but remain unrun here.
 They inject a fake gateway and never create real accounts or payments.
 
 In the assistant environment, dependency resolution from the existing local package cache and

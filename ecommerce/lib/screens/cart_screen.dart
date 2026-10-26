@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../models/catalog.dart';
+import '../models/checkout.dart';
+import 'checkout_screen.dart';
 import '../services/cart_controller.dart';
 import '../widgets/product_art.dart';
 import '../widgets/sign_in_prompt.dart';
@@ -254,6 +256,38 @@ class _CartScreenState extends State<CartScreen> {
                       ),
                     ),
                   ),
+                  SafeArea(
+                    top: false,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed:
+                              editable &&
+                                  selected.isNotEmpty &&
+                                  selected.length <= 20 &&
+                                  selected.every((line) => line.available)
+                              ? () => openCheckout(
+                                  context,
+                                  cart.gateway,
+                                  CheckoutSelection.cart(
+                                    selected.map((line) => line.id),
+                                  ),
+                                )
+                              : null,
+                          child: const Text('Checkout'),
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (selected.length > 20)
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(20, 0, 20, 16),
+                      child: Text(
+                        'Select up to 20 different items per checkout.',
+                      ),
+                    ),
                 ],
               ),
       );

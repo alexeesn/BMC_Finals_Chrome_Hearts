@@ -4,7 +4,7 @@ Last updated: 2026-10-26 (Asia/Singapore).
 
 ## Current phase
 
-The user encountered a 36-pixel bottom overflow in the cart's 64×76 product-image placeholder and asked whether the UI is final. Fixed the shared placeholder to adapt to thumbnail/card size; UI is still under development. Next: hot restart and recheck the cart layout, then finish the cart/address persistence and account-isolation checkpoint. Buy Now, checkout/payment screens, orders, and admin management remain pending. Widget tests, APK build, and a real PAY transaction remain unverified.
+The user confirmed the overflow message was an old log and the yellow/black overflow is gone. Implemented Buy Now and selected-cart checkout review locally, including saved-address selection and a read-only server quote RPC. Next: guide the user to apply only `0005_checkout_quote.sql`, then hot restart and verify the review. Order/payment submission, payment UI, order history, and admin management remain pending. Widget tests, APK build, and a real PAY transaction remain unverified.
 
 ## Completed
 
@@ -64,22 +64,29 @@ The user encountered a 36-pixel bottom overflow in the cart's 64×76 product-ima
 - Updated Flutter/setup documentation for the cart/address device checkpoint. No hosted mutations or deployments were performed by the assistant, and Git commits/pushes remain the user's responsibility.
 - The user supplied a Flutter web RenderFlex error from `ProductArt`: the full-size 58px icon, spacing, and wrapped label exceeded the cart's 64×76 thumbnail by 36px. Replaced the fixed placeholder with constraint-aware compact icon-only rendering, bounded scale-down, and a single-line label for larger cards. The same fallback covers empty/loading/failed images. Confirmed the UI is still under development; no broad redesign was requested.
 - Added nine targeted layout regression cases (64×76, 160×160, 320×280 at text scales 1/2/3). Whole-app Dart analysis passes. Targeted Flutter execution remains blocked by the SDK cache lockfile restriction; device layout verification is pending.
+- The user explicitly answered that no yellow/black overflow remains after restart and the repeated exception was an old log. The layout fix is now user-reported good; the full cart/address isolation and persistence checklist was not individually confirmed.
+- Added `0005_checkout_quote.sql`: signed-in, owner-filtered read-only checkout quote with active catalog/stock checks, stored cart quantities, server shipping, and delivery details. It returns centavo amounts and review lines, creates no orders/payments, changes no cart rows, and reserves no stock. This is a new migration not yet applied to the hosted project.
+- Added immutable Buy Now/cart selections, quote models, the gateway RPC call, and a dark checkout-review screen. Buy Now preserves the saved cart; cart Checkout includes only selected available lines (up to 20). Review selects default/first owned address, supports adding/editing addresses and returning, refreshes prices/address changes, ignores superseded responses, and hides private review data if the account changes.
+- No order/payment submission button is implemented in this review stage. The existing `create-payment` endpoint remains the future order/payment authority and must revalidate current data before opening a hosted payment.
+- Added three frontend regression cases for Buy Now preserving cart, address-required review, and selected-cart-only payloads. The app/test analysis passes; Flutter execution remains blocked by the SDK cache lockfile.
+- Extended PostgreSQL checks for quote totals/client-price rejection, saved cart quantity, address/cart ownership, duplicate selections, zero stock, anonymous permission denial, and absence of order/payment/stock side effects. Updated the local runner to discover migration files in order instead of its former hardcoded four-file list. The first run exposed the old runner list; subsequent complete runs passed with all five migrations.
+- Latest full backend suite passed: database/security/quote checks, concurrent last-item checkout, and 28 mocked handler tests. Last successful logs: `bmc-ecom-test-QHATV4`; the disposable server was stopped. No hosted migration/function deployment or actual provider/payment call was performed.
 
 ## Observed codebase
 
 - `ecommerce/lib/main.dart` initializes Supabase through a retryable startup screen; `app.dart` defines the dark theme and Collection/Account navigation.
-- `ecommerce/lib/screens/` contains catalog, product detail/Add to cart, account, email/password auth, cart, and saved-address screens. `services/shop_gateway.dart` uses the existing hosted schema and safe variant view; `services/cart_controller.dart` owns shared cart state and async identity guards.
-- `ecommerce/test/widget_test.dart` contains nine model/controller/widget tests with a fake gateway. `test/product_art_test.dart` adds nine placeholder size/text-scale regression cases; see verification limits below.
+- `ecommerce/lib/screens/` contains catalog, product detail/Add to cart/Buy Now, account, email/password auth, cart, saved addresses, and checkout review. `services/shop_gateway.dart` includes the new quote RPC; `services/cart_controller.dart` owns shared cart state and async identity guards.
+- `ecommerce/test/widget_test.dart` contains twelve model/controller/widget tests with a fake gateway. `test/product_art_test.dart` adds nine placeholder size/text-scale regression cases; see verification limits below.
 - `ecommerce/pubspec.yaml` includes `supabase_flutter: ^2.18.3`; no payment UI package is needed in this milestone.
 - The app has Android, iOS, web, Windows, macOS, and Linux folders. Final delivery targets still need confirmation.
 - `ecommerce/README.md` links the actual app setup/checkpoints.
 - Existing backend modifications were preserved. The assistant did not commit or push.
 
-Backend, Flutter foundation, and cart/address stage are implemented locally. Hosted migrations/seed, secrets, sample webhook HTTP 200, scheduled-worker check, admin promotion, six SQL checks, and general app foundation behavior are user-reported successful. Cart/address runtime checks and an actual PAY transaction remain pending.
+Backend, Flutter foundation, cart/addresses, and checkout review are implemented locally. Hosted migrations 0001–0004/seed, secrets, sample webhook HTTP 200, scheduled-worker check, admin promotion, six SQL checks, general app foundation behavior, and the overflow fix are user-reported successful. Hosted migration 0005, checkout review, individual cart/address persistence/isolation checks, and an actual PAY transaction remain pending.
 
 ## Immediate next step
 
-Guide a hot restart (`R` in an active `flutter run`) and verify the cart thumbnail no longer overflows. Then complete Add to cart duplicate merge, quantity/remove, app restart persistence, and separate-account isolation. Test Account → My addresses add/edit/default/persistence/delete too. No SQL/package changes are needed for this fix. See `docs/FLUTTER_SETUP.md`. After this checkpoint, implement Buy Now and checkout with the trusted payment endpoint, safe retries, and actual backend totals; payment navigation must never mark an order paid.
+Guide only `supabase/migrations/0005_checkout_quote.sql` in Supabase SQL Editor → New Query, paste all and Run. Do not rerun completed migrations or seed. No Edge redeployment or dependency change is needed for this review stage. Then hot restart and test product Buy Now/address/totals and selected-cart checkout; confirm Buy Now/unselected rows remain in Cart. This screen reviews an order without creating one or holding stock. After review works, implement actual order/payment submission through the existing trusted endpoint, safe retries, and refreshed backend state.
 
 Before relying on the worker/real checkout, use the current generated bundles for `reconcile-payments` and `create-payment`; they include session-ID response compatibility too. Their previous deployment instructions were supplied but their runtime results were not verified.
 
@@ -91,7 +98,7 @@ The `supabase/setup/verify.sql` checkpoint is now explicitly user-reported all s
 
 Then follow the full guide for Auth/admin setup, Xendit Test Mode secrets, browser-editor function deployment, webhook registration, and Cron/Vault worker configuration. Actual project/account access remains unverified. Do not claim connection success until the hosted checks and a genuine test transaction pass.
 
-Flutter foundation is user-reported good; persistent cart and addresses are locally implemented, awaiting device verification. Next implementation work is Buy Now/checkout, followed by Xendit payment UI and order history. Continue using the existing `ecommerce/` app and accepted dark layout.
+Flutter foundation and the overflow fix are user-reported good; cart/addresses and checkout review are locally implemented. Next implementation work after the review checkpoint is Xendit order/payment submission and order history. Continue using the existing `ecommerce/` app and accepted dark layout.
 
 Keep the one-store Android app, shared customer/admin app, and fixed shipping fee as proposals until confirmed through discussion or an implementation request. The user has confirmed the dark-theme direction; the final font, shop name, and product imagery remain open.
 

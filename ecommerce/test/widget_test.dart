@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:ecommerce/app.dart';
 import 'package:ecommerce/models/catalog.dart';
 import 'package:ecommerce/models/shopping.dart';
+import 'package:ecommerce/models/checkout.dart';
+import 'package:ecommerce/screens/checkout_screen.dart';
 import 'package:ecommerce/services/cart_controller.dart';
 import 'package:ecommerce/screens/addresses_screen.dart';
 import 'package:ecommerce/screens/auth_screen.dart';
@@ -40,6 +42,18 @@ const ring = CatalogProduct(
   ],
 );
 
+const demoAddress = DeliveryAddress(
+  id: 'address-1',
+  recipient: 'Demo recipient',
+  phone: '09123456789',
+  province: 'Metro Manila',
+  city: 'Quezon City',
+  barangay: 'Sample',
+  street: '12 Demo Street',
+  postalCode: '1100',
+  isDefault: true,
+);
+
 class FakeShop extends ShopGateway {
   final events = StreamController<void>.broadcast();
   ShopIdentity? identity;
@@ -52,6 +66,7 @@ class FakeShop extends ShopGateway {
   Future<List<CartLine>>? delayedCart;
   bool mutationFails = false;
   int addressSaves = 0;
+  CheckoutSelection? lastQuoteSelection;
   @override
   ShopIdentity? get currentUser => identity;
   @override
@@ -168,6 +183,31 @@ class FakeShop extends ShopGateway {
         )
         .toList();
   }
+
+  @override
+  Future<CheckoutQuote> quoteCheckout(
+    CheckoutSelection selection,
+    String addressId,
+  ) async {
+    lastQuoteSelection = selection;
+    return CheckoutQuote(
+      subtotalMinor: 1200000,
+      shippingMinor: 15000,
+      totalMinor: 1215000,
+      address: addresses[identity!.id]!.firstWhere(
+        (row) => row.id == addressId,
+      ),
+      items: const [
+        QuotedItem(
+          name: 'Archive Tee',
+          option: 'M',
+          quantity: 1,
+          unitPriceMinor: 1200000,
+          lineTotalMinor: 1200000,
+        ),
+      ],
+    );
+  }
 }
 
 Future<void> showShop(WidgetTester tester, FakeShop shop) async {
@@ -182,6 +222,99 @@ void main() {
   late FakeShop shop;
   setUp(() => shop = FakeShop());
   tearDown(() => shop.events.close());
+
+  testWidgets(
+    'Buy Now opens a server-priced review without changing the saved cart',
+    (tester) async {
+      shop.identity = const ShopIdentity('admin', 'owner@example.com');
+      shop.addresses['admin'] = [demoAddress];
+      shop.carts['admin'] = [
+        CartLine(
+          id: 'saved',
+          variantId: 'm',
+          quantity: 2,
+          revision: 1,
+          product: tee,
+          variant: tee.variants.first,
+        ),
+      ];
+      await showShop(tester, shop);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Archive Tee'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('M'));
+      await tester.tap(find.text('Buy Now'));
+      await tester.pumpAndSettle();
+      expect(find.text('Shipping'), findsOneWidget);
+      expect(find.text('₱12,150.00'), findsOneWidget);
+      expect(shop.lastQuoteSelection!.source, 'buy_now');
+      expect(shop.lastQuoteSelection!.items.single, {
+        'variant_id': 'm',
+        'quantity': 1,
+      });
+      expect(shop.carts['admin']!.single.quantity, 2);
+    },
+  );
+
+  testWidgets('Checkout without a saved address does not request a quote', (
+    tester,
+  ) async {
+    shop.identity = const ShopIdentity('admin', 'owner@example.com');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CheckoutScreen(
+          gateway: shop,
+          selection: CheckoutSelection.buyNow('m', 1),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Add a delivery address to review your order.'),
+      findsOneWidget,
+    );
+    expect(find.text('Add / edit addresses'), findsOneWidget);
+    expect(shop.lastQuoteSelection, isNull);
+  });
+
+  testWidgets(
+    'Cart checkout sends only selected cart IDs and preserves unselected rows',
+    (tester) async {
+      shop.identity = const ShopIdentity('admin', 'owner@example.com');
+      shop.addresses['admin'] = [demoAddress];
+      shop.carts['admin'] = [
+        CartLine(
+          id: 'selected',
+          variantId: 'm',
+          quantity: 1,
+          revision: 1,
+          product: tee,
+          variant: tee.variants.first,
+        ),
+        CartLine(
+          id: 'unselected',
+          variantId: '8',
+          quantity: 1,
+          revision: 1,
+          product: ring,
+          variant: ring.variants.first,
+        ),
+      ];
+      await showShop(tester, shop);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cart'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(Checkbox).at(2));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Checkout'));
+      await tester.pumpAndSettle();
+      expect(shop.lastQuoteSelection!.source, 'cart');
+      expect(shop.lastQuoteSelection!.items, [
+        {'cart_item_id': 'selected'},
+      ]);
+      expect(shop.carts['admin']!.length, 2);
+    },
+  );
 
   test(
     'Late cart response cannot restore the previous account after logout',

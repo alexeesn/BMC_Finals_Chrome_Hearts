@@ -38,7 +38,9 @@ try {
   }
   if (!ready) throw new Error('Local server did not start; inspect server.log');
   await run(executable('psql'),['-X','-q','-d','postgres','-v','ON_ERROR_STOP=1','-c','create database bmc_test']);
-  for (const file of ['tests/bootstrap.sql','migrations/0001_schema.sql','migrations/0002_permissions.sql','migrations/0003_business_functions.sql','migrations/0004_storage.sql','seed.sql','tests/database.sql']) {
+  const migrations = fs.readdirSync(path.join(root,'supabase','migrations'))
+    .filter(file => /^\d+_.*\.sql$/.test(file)).sort().map(file => 'migrations/' + file);
+  for (const file of ['tests/bootstrap.sql',...migrations,'seed.sql','tests/database.sql']) {
     await run(executable('psql'),['-X','-q','-v','ON_ERROR_STOP=1','-o',path.join(folder,'queries.log'),'-f',path.join(root,'supabase',file)]);
   }
   await run(process.execPath,['supabase/tests/concurrency.mjs']);
