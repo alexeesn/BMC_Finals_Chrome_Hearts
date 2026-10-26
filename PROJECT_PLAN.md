@@ -19,7 +19,7 @@ Build a functional school ecommerce app with a Chrome Hearts product catalog, us
 | Delivery details | Saved customer addresses and checkout |
 | Administration | Include an admin panel |
 | Setup documentation | Step-by-step Supabase setup and Xendit-to-Supabase connection guide with implementation files |
-| App installation | README with environment configuration, dependency installation, browser/Android run, and school-demo APK installation steps; `.env` and shareable `.env.example` |
+| App installation | English README with environment configuration, dependency installation, browser/Android run, and school-demo APK installation steps; `.env` and shareable `.env.example` |
 | Codebase | User's own local project; Flutter app is in `ecommerce/` |
 | Git workflow | User handles commits and pushes |
 

@@ -1,6 +1,7 @@
 # CH / Collection — app installation
 
-Complete installation, environment, browser/Android, APK, and troubleshooting steps:
+For complete installation instructions, environment configuration, browser and
+Android setup, APK installation, and troubleshooting, see the
 **[Repository installation README](../README.md)**.
 
 For a fresh checkout without `.env`, copy `.env.example` to `.env` and fill in the
