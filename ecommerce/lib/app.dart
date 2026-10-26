@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import 'screens/account_screen.dart';
 import 'screens/catalog_screen.dart';
+import 'screens/cart_screen.dart';
 import 'services/shop_gateway.dart';
+import 'services/cart_controller.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({
@@ -76,24 +78,47 @@ class ShopShell extends StatefulWidget {
 
 class _ShopShellState extends State<ShopShell> {
   int _tab = 0;
+  late final _cart = CartController(widget.gateway);
+  @override
+  void dispose() {
+    _cart.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     body: IndexedStack(
       index: _tab,
       children: [
-        CatalogScreen(gateway: widget.gateway),
+        CatalogScreen(
+          gateway: widget.gateway,
+          cart: _cart,
+          onViewCart: () => setState(() => _tab = 1),
+        ),
+        CartScreen(cart: _cart),
         AccountScreen(gateway: widget.gateway),
       ],
     ),
     bottomNavigationBar: NavigationBar(
       selectedIndex: _tab,
       onDestinationSelected: (index) => setState(() => _tab = index),
-      destinations: const [
-        NavigationDestination(
+      destinations: [
+        const NavigationDestination(
           icon: Icon(Icons.grid_view_outlined),
           label: 'Collection',
         ),
         NavigationDestination(
+          icon: AnimatedBuilder(
+            animation: _cart,
+            builder: (context, _) => Badge(
+              isLabelVisible: _cart.count > 0,
+              label: Text('${_cart.count}'),
+              child: const Icon(Icons.shopping_bag_outlined),
+            ),
+          ),
+          label: 'Cart',
+        ),
+        const NavigationDestination(
           icon: Icon(Icons.person_outline),
           label: 'Account',
         ),

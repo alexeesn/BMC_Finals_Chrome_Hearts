@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/catalog.dart';
+import '../models/shopping.dart';
 
 class ShopIdentity {
   const ShopIdentity(this.id, this.email);
@@ -24,6 +25,14 @@ abstract class ShopGateway {
   /// True means email confirmation is required before sign-in.
   Future<bool> signUp(String name, String email, String password);
   Future<void> signOut();
+  Future<List<CartLine>> loadCart();
+  Future<void> addToCart(String variantId, int quantity);
+  Future<void> updateCartQuantity(CartLine line, int quantity);
+  Future<void> removeCartLine(CartLine line);
+  Future<List<DeliveryAddress>> loadAddresses();
+  Future<void> saveAddress(DeliveryAddress address);
+  Future<void> deleteAddress(String id);
+  Future<void> setDefaultAddress(String id);
 }
 
 class SupabaseShopGateway implements ShopGateway {
@@ -117,4 +126,185 @@ class SupabaseShopGateway implements ShopGateway {
 
   @override
   Future<void> signOut() => client.auth.signOut(scope: SignOutScope.local);
+
+  String _requireUser() {
+    final id = currentUser?.id;
+    if (id == null) throw const ShoppingException('Please sign in first.');
+    return id;
+  }
+
+  @override
+  Future<List<CartLine>> loadCart() async {
+    final userId = _requireUser();
+    final rows = await client
+        .from('cart_items')
+        .select('id,variant_id,quantity,revision')
+        .eq('user_id', userId)
+        .order('updated_at');
+    final catalog = await loadCatalog();
+    final variants = <String, CatalogVariant>{};
+    final products = <String, CatalogProduct>{};
+    for (final product in catalog) {
+      for (final variant in product.variants) {
+        variants[variant.id] = variant;
+        products[variant.id] = product;
+      }
+    }
+    return rows
+        .map(
+          (row) => CartLine(
+            id: row['id'] as String,
+            variantId: row['variant_id'] as String,
+            quantity: (row['quantity'] as num).toInt(),
+            revision: (row['revision'] as num).toInt(),
+            product: products[row['variant_id']],
+            variant: variants[row['variant_id']],
+          ),
+        )
+        .toList();
+  }
+
+  Future<void> _validateQuantity(String variantId, int quantity) async {
+    if (quantity < 1 || quantity > 99) {
+      throw const ShoppingException('Quantity must be between 1 and 99.');
+    }
+    final variant = await client
+        .from('catalog_variants')
+        .select('available_stock')
+        .eq('id', variantId)
+        .maybeSingle();
+    if (variant == null || (variant['available_stock'] as num) < quantity) {
+      throw const ShoppingException(
+        'Not enough stock. Refresh your cart and choose a lower quantity.',
+      );
+    }
+  }
+
+  @override
+  Future<void> addToCart(String variantId, int quantity) async {
+    final userId = _requireUser();
+    if (quantity < 1 || quantity > 99) {
+      throw const ShoppingException('Quantity must be between 1 and 99.');
+    }
+    final existing = await client
+        .from('cart_items')
+        .select('id,quantity,revision')
+        .eq('user_id', userId)
+        .eq('variant_id', variantId)
+        .maybeSingle();
+    final total = quantity + ((existing?['quantity'] as num?)?.toInt() ?? 0);
+    await _validateQuantity(variantId, total);
+    if (existing == null) {
+      try {
+        await client.from('cart_items').insert({
+          'user_id': userId,
+          'variant_id': variantId,
+          'quantity': quantity,
+        });
+      } on PostgrestException catch (error) {
+        if (error.code == '23505') {
+          throw const ShoppingException(
+            'Cart changed on another device. Refresh and try again.',
+          );
+        }
+        rethrow;
+      }
+    } else {
+      final changed = await client
+          .from('cart_items')
+          .update({'quantity': total})
+          .eq('id', existing['id'])
+          .eq('user_id', userId)
+          .eq('revision', existing['revision'])
+          .select('id');
+      if (changed.isEmpty) {
+        throw const ShoppingException(
+          'Cart changed on another device. Refresh and try again.',
+        );
+      }
+    }
+  }
+
+  @override
+  Future<void> updateCartQuantity(CartLine line, int quantity) async {
+    final userId = _requireUser();
+    await _validateQuantity(line.variantId, quantity);
+    final changed = await client
+        .from('cart_items')
+        .update({'quantity': quantity})
+        .eq('id', line.id)
+        .eq('user_id', userId)
+        .eq('revision', line.revision)
+        .select('id');
+    if (changed.isEmpty) {
+      throw const ShoppingException(
+        'Cart changed. Refresh before editing again.',
+      );
+    }
+  }
+
+  @override
+  Future<void> removeCartLine(CartLine line) async {
+    final changed = await client
+        .from('cart_items')
+        .delete()
+        .eq('id', line.id)
+        .eq('user_id', _requireUser())
+        .eq('revision', line.revision)
+        .select('id');
+    if (changed.isEmpty) {
+      throw const ShoppingException(
+        'Cart changed. Refresh before removing this item.',
+      );
+    }
+  }
+
+  @override
+  Future<List<DeliveryAddress>> loadAddresses() async {
+    final rows = await client
+        .from('addresses')
+        .select()
+        .eq('user_id', _requireUser())
+        .order('is_default', ascending: false)
+        .order('created_at');
+    return rows.map(DeliveryAddress.fromJson).toList();
+  }
+
+  @override
+  Future<void> saveAddress(DeliveryAddress address) async {
+    final userId = _requireUser();
+    if (address.id == null) {
+      await client.from('addresses').insert({
+        'user_id': userId,
+        ...address.toFields(),
+      });
+    } else {
+      final rows = await client
+          .from('addresses')
+          .update(address.toFields())
+          .eq('id', address.id!)
+          .eq('user_id', userId)
+          .select('id');
+      if (rows.isEmpty) {
+        throw const ShoppingException(
+          'Address no longer exists. Refresh the list.',
+        );
+      }
+    }
+  }
+
+  @override
+  Future<void> deleteAddress(String id) async {
+    await client
+        .from('addresses')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', _requireUser());
+  }
+
+  @override
+  Future<void> setDefaultAddress(String id) async {
+    _requireUser();
+    await client.rpc('set_default_address', params: {'p_address': id});
+  }
 }

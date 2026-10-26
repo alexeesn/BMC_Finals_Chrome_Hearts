@@ -6,7 +6,8 @@ catalog search/categories, product details, option selection, safe available-sto
 loading/error/retry states, and image fallbacks. The display name `CH / COLLECTION`
 is provisional. Seed products/prices remain fictional samples.
 
-Cart, addresses, checkout/payment screens, orders, and admin management are next milestones.
+Persistent cart and saved delivery addresses are also implemented locally. Buy Now,
+checkout/payment screens, orders, and admin management are next milestones.
 An admin role label does not imply that admin management screens are implemented.
 
 ## Run on your computer
@@ -31,6 +32,34 @@ flutter run
    open the confirmation email, then return to the app and sign in. It should show Customer account.
    Automatic opening of the installed app from email links is not configured in this milestone.
 
+## Cart and address checkpoint
+
+After this update, hot restart the app (`R` in an active `flutter run` terminal), or run it again.
+No additional SQL or package installation is needed for cart/addresses.
+
+1. Open a product, select an available option, choose a quantity, and tap Add to cart.
+   If signed out, sign in first; returning to the product resumes the add action.
+2. Add the same option again. It should merge into one cart row without exceeding the current
+   stock or 99 items. The app checks availability; only a later backend checkout reserves stock.
+3. Open Cart. Change quantity, select/unselect rows, check the selected subtotal, and remove a row.
+   Refresh the cart when stock changes. An archived/unavailable variant remains removable.
+4. Restart the app and verify the cart remains for the same account. Sign out, then use a second
+   customer and verify their cart is separate. Late reads from the previous account must not
+   repopulate the current cart. Concurrent edits return a refresh message instead of overwriting
+   a changed revision.
+5. Open Account → My addresses → Add address. Fill in recipient, phone, province, city,
+   barangay, street, and four-digit Philippine postal code; instructions are optional.
+   This milestone uses validated text fields rather than a geographic-directory API.
+6. Save, edit, and choose Set as default. The default operation uses the existing
+   `set_default_address` RPC; normal address edits never directly write the default flag.
+7. Restart and verify addresses/default remain. Test a second account for isolation.
+8. Delete an address and confirm it disappears. Deleting the default can leave no default;
+   an upcoming checkout must still require an explicit valid address.
+
+Cart subtotals are a review display. The trusted checkout will calculate final prices, shipping,
+and stock eligibility; the cart does not reserve stock. Buy Now/checkout and payment controls
+are not part of this cart/address checkpoint.
+
 ## Public configuration
 
 `lib/config/app_config.dart` contains the user-supplied project URL and public publishable key.
@@ -54,6 +83,8 @@ flutter test
 
 Widget tests cover catalog filtering, sold-out option selection, retry after a failed fetch,
 form validation, login/logout and account switching, and signup requiring email confirmation.
+Additional tests cover cart merging/reopening, quantity/removal UI, stale cart reads after logout,
+rejected cart mutations, and address validation/saving. They remain unrun under the SDK restriction.
 They inject a fake gateway and never create real accounts or payments.
 
 In the assistant environment, dependency resolution from the existing local package cache and

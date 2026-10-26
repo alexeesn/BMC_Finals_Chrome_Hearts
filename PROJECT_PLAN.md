@@ -53,7 +53,7 @@ Proposed main navigation: Home, Categories, Cart, Account.
 
 Detailed proposed layouts and screen states: [Screen plan](docs/SCREEN_PLAN.md).
 Offline interactive design preview: [Shopping flow](docs/previews/shopping-flow.html).
-The preview uses fictional data for review. The existing Flutter app now implements the dark catalog/details and auth/account foundation with live Supabase queries. Cart/checkout and admin management screens remain pending. See [Flutter setup](docs/FLUTTER_SETUP.md) for device checkpoints and current verification limits.
+The preview uses fictional data for review. The existing Flutter app implements dark catalog/details, auth/account, persistent cart, and saved delivery addresses using Supabase. Buy Now/checkout, payment/order screens, and admin management remain pending. See [Flutter setup](docs/FLUTTER_SETUP.md) for device checkpoints and current verification limits.
 
 ### Shopping behavior
 
@@ -62,7 +62,7 @@ The preview uses fictional data for review. The existing Flutter app now impleme
 - Buy Now opens checkout for the selected item without changing the existing cart.
 - Address fields: recipient name, phone, province, city/municipality, barangay, street/building/unit, postal code, optional delivery instructions, and default flag.
 - Validate address ownership and required fields. Save a delivery-address snapshot on each order.
-- Decide structured geographical dropdowns versus validated text fields during screen planning.
+- The initial saved-address editor uses validated Philippine text fields and a four-digit postal code; geographical dropdowns remain a possible later enhancement.
 - The backend removes matching source cart rows only after confirmed payment and only if their variant/quantity/revision still match the checkout snapshot. Newer edits are preserved; Buy Now leaves the cart intact.
 
 ## Admin screens

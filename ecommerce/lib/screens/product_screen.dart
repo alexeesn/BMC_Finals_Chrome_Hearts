@@ -1,17 +1,58 @@
 import 'package:flutter/material.dart';
 
 import '../models/catalog.dart';
+import '../services/cart_controller.dart';
 import '../widgets/product_art.dart';
+import '../widgets/sign_in_prompt.dart';
+import '../widgets/shopping_feedback.dart';
 
 class ProductScreen extends StatefulWidget {
-  const ProductScreen({super.key, required this.product});
+  const ProductScreen({
+    super.key,
+    required this.product,
+    required this.cart,
+    required this.onViewCart,
+  });
   final CatalogProduct product;
+  final CartController cart;
+  final VoidCallback onViewCart;
   @override
   State<ProductScreen> createState() => _ProductScreenState();
 }
 
 class _ProductScreenState extends State<ProductScreen> {
   CatalogVariant? _selected;
+  int _quantity = 1;
+  bool _saving = false;
+
+  Future<void> _add() async {
+    if (_saving || _selected == null) return;
+    setState(() => _saving = true);
+    try {
+      if (!await ensureSignedIn(context, widget.cart.gateway)) return;
+      if (!mounted) return;
+      await widget.cart.add(_selected!.id, _quantity);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Added to cart'),
+          action: SnackBarAction(
+            label: 'View cart',
+            onPressed: () {
+              if (!mounted) return;
+              widget.onViewCart();
+              Navigator.of(context).pop();
+            },
+          ),
+        ),
+      );
+    } catch (error) {
+      if (mounted) showShoppingError(context, error);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final product = widget.product;
@@ -59,9 +100,12 @@ class _ProductScreenState extends State<ProductScreen> {
                           '${variant.label}${variant.availableStock == 0 ? ' · Sold out' : ''}',
                         ),
                         selected: _selected?.id == variant.id,
-                        onSelected: variant.availableStock <= 0
+                        onSelected: variant.availableStock <= 0 || _saving
                             ? null
-                            : (_) => setState(() => _selected = variant),
+                            : (_) => setState(() {
+                                _selected = variant;
+                                _quantity = 1;
+                              }),
                       ),
                     )
                     .toList(),
@@ -75,8 +119,43 @@ class _ProductScreenState extends State<ProductScreen> {
                     : '${_selected!.availableStock} available',
               ),
               const Divider(height: 40),
+              Row(
+                children: [
+                  const Expanded(child: Text('Quantity')),
+                  IconButton(
+                    tooltip: 'Decrease quantity',
+                    onPressed: !_saving && _quantity > 1
+                        ? () => setState(() => _quantity--)
+                        : null,
+                    icon: const Icon(Icons.remove),
+                  ),
+                  Text('$_quantity'),
+                  IconButton(
+                    tooltip: 'Increase quantity',
+                    onPressed:
+                        !_saving &&
+                            _selected != null &&
+                            _quantity < _selected!.availableStock &&
+                            _quantity < 99
+                        ? () => setState(() => _quantity++)
+                        : null,
+                    icon: const Icon(Icons.add),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
               Text(product.description, style: const TextStyle(height: 1.7)),
             ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: FilledButton.icon(
+            onPressed: _selected == null || _saving ? null : _add,
+            icon: const Icon(Icons.add_shopping_cart),
+            label: Text(_saving ? 'Adding…' : 'Add to cart'),
           ),
         ),
       ),

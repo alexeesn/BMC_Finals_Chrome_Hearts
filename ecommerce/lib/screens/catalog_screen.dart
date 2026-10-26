@@ -2,12 +2,20 @@ import 'package:flutter/material.dart';
 
 import '../models/catalog.dart';
 import '../services/shop_gateway.dart';
+import '../services/cart_controller.dart';
 import '../widgets/product_art.dart';
 import 'product_screen.dart';
 
 class CatalogScreen extends StatefulWidget {
-  const CatalogScreen({super.key, required this.gateway});
+  const CatalogScreen({
+    super.key,
+    required this.gateway,
+    required this.cart,
+    required this.onViewCart,
+  });
   final ShopGateway gateway;
+  final CartController cart;
+  final VoidCallback onViewCart;
   @override
   State<CatalogScreen> createState() => _CatalogScreenState();
 }
@@ -219,7 +227,11 @@ class _CatalogScreenState extends State<CatalogScreen> {
                           child: InkWell(
                             onTap: () => Navigator.of(context).push(
                               MaterialPageRoute<void>(
-                                builder: (_) => ProductScreen(product: product),
+                                builder: (_) => ProductScreen(
+                                  product: product,
+                                  cart: widget.cart,
+                                  onViewCart: widget.onViewCart,
+                                ),
                               ),
                             ),
                             child: Column(

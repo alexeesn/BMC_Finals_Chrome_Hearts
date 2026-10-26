@@ -4,7 +4,7 @@ Last updated: 2026-10-26 (Asia/Singapore).
 
 ## Current phase
 
-The user explicitly confirmed all six database checks are OK and supplied the Supabase publishable key for the Flutter app. Implemented the Flutter foundation/auth/catalog milestone locally in the existing app. Next: run the app on the user's device and verify catalog loading and login/account role. Hosted app access, widget tests, APK build, and a real PAY transaction remain unverified.
+The user encountered a 36-pixel bottom overflow in the cart's 64×76 product-image placeholder and asked whether the UI is final. Fixed the shared placeholder to adapt to thumbnail/card size; UI is still under development. Next: hot restart and recheck the cart layout, then finish the cart/address persistence and account-isolation checkpoint. Buy Now, checkout/payment screens, orders, and admin management remain pending. Widget tests, APK build, and a real PAY transaction remain unverified.
 
 ## Completed
 
@@ -55,22 +55,31 @@ The user explicitly confirmed all six database checks are OK and supplied the Su
 - Replaced the existing Flutter counter app with a dark collection/search/category screen, product details and selectable available variants, image fallbacks, Supabase initialization, persisted auth, login/register with email-confirmation handling, sign-out, and own profile/customer/admin role display. Added Android release Internet permission and `supabase_flutter` 2.18.3; offline dependency resolution generated the lockfile/config and platform plugin registrants.
 - Added an injectable gateway and five tests covering centavo formatting, catalog search/sold-out variants, failed-fetch retry, login validation/logout/account switching, and confirmation-required signup. Tests are authored and statically analyzed, not executed successfully in this environment.
 - Added `docs/FLUTTER_SETUP.md` and updated the app README. The user still needs to run `flutter pub get` / `flutter run` and inspect the actual catalog and account. Cart, addresses, checkout, orders, and admin management UI remain pending milestones.
+- The user replied "guds naman na" after the run/catalog/admin-login instructions. Treat the app foundation as generally user-reported good; individual session-persistence/customer-signup checks were not separately supplied.
+- Clarified that the SDK write restriction belongs to the assistant's workspace sandbox. The user's successful local Flutter run does not require changing Windows SDK permissions. Consulted official OpenAI documentation for the explanation; no settings or SDK files were changed.
+- Added authenticated persistent cart loading, Add to cart/merge, quantity controls, remove, row selection/subtotal, live cart badge, and login/resume from product details. Gateway reads current safe-view stock and caps quantities at 99; updates/removals filter owner and expected row revision to avoid silently overwriting concurrent changes. Checkout remains authoritative and cart actions do not reserve stock.
+- Added saved address list, create/edit form, confirmed delete, and Set as default using the existing authenticated RPC. Address form uses validated Philippine text fields and postal code. Ordinary insert/update payloads exclude `is_default`. No new SQL or packages are required for this stage.
+- Added account-change guards: clear cart state on auth changes, ignore stale cart reads after account changes, key address lists per owner, and hide an address editor if its owner changes.
+- Extended the fake gateway and regression suite to nine tests, including rejected cart mutations, delayed old-user reads after logout, cart merge/reopen/update/remove UI, and address validation/saving. All source and test files pass Dart analysis; widget execution remains blocked by SDK cache write permission.
+- Updated Flutter/setup documentation for the cart/address device checkpoint. No hosted mutations or deployments were performed by the assistant, and Git commits/pushes remain the user's responsibility.
+- The user supplied a Flutter web RenderFlex error from `ProductArt`: the full-size 58px icon, spacing, and wrapped label exceeded the cart's 64×76 thumbnail by 36px. Replaced the fixed placeholder with constraint-aware compact icon-only rendering, bounded scale-down, and a single-line label for larger cards. The same fallback covers empty/loading/failed images. Confirmed the UI is still under development; no broad redesign was requested.
+- Added nine targeted layout regression cases (64×76, 160×160, 320×280 at text scales 1/2/3). Whole-app Dart analysis passes. Targeted Flutter execution remains blocked by the SDK cache lockfile restriction; device layout verification is pending.
 
 ## Observed codebase
 
 - `ecommerce/lib/main.dart` initializes Supabase through a retryable startup screen; `app.dart` defines the dark theme and Collection/Account navigation.
-- `ecommerce/lib/screens/` contains catalog, product detail, account, and email/password auth screens; `services/shop_gateway.dart` uses the existing hosted schema and safe variant view.
-- `ecommerce/test/widget_test.dart` contains five model/widget tests with a fake gateway; see verification limits below.
+- `ecommerce/lib/screens/` contains catalog, product detail/Add to cart, account, email/password auth, cart, and saved-address screens. `services/shop_gateway.dart` uses the existing hosted schema and safe variant view; `services/cart_controller.dart` owns shared cart state and async identity guards.
+- `ecommerce/test/widget_test.dart` contains nine model/controller/widget tests with a fake gateway. `test/product_art_test.dart` adds nine placeholder size/text-scale regression cases; see verification limits below.
 - `ecommerce/pubspec.yaml` includes `supabase_flutter: ^2.18.3`; no payment UI package is needed in this milestone.
 - The app has Android, iOS, web, Windows, macOS, and Linux folders. Final delivery targets still need confirmation.
 - `ecommerce/README.md` links the actual app setup/checkpoints.
 - Existing backend modifications were preserved. The assistant did not commit or push.
 
-Backend and the first Flutter milestone are implemented locally. Hosted migrations/seed, secrets, sample webhook HTTP 200, scheduled-worker check, admin promotion, and all six SQL checks are user-reported successful. Actual customer auth/catalog access and a PAY transaction have not been independently verified.
+Backend, Flutter foundation, and cart/address stage are implemented locally. Hosted migrations/seed, secrets, sample webhook HTTP 200, scheduled-worker check, admin promotion, six SQL checks, and general app foundation behavior are user-reported successful. Cart/address runtime checks and an actual PAY transaction remain pending.
 
 ## Immediate next step
 
-Run the existing app from `ecommerce/` using `flutter pub get`, then `flutter run`. Verify three seeded products load, filtering/details/stock work, and Account sign-in using the intended Auth account shows Admin account. Confirm session persistence and sign-out; then register a distinct customer and verify Customer account. The local gateway uses the real schema but hosted runtime access is unverified. See `docs/FLUTTER_SETUP.md`. Do not start the cart/checkout milestone until this app foundation has been checked or the user requests that work.
+Guide a hot restart (`R` in an active `flutter run`) and verify the cart thumbnail no longer overflows. Then complete Add to cart duplicate merge, quantity/remove, app restart persistence, and separate-account isolation. Test Account → My addresses add/edit/default/persistence/delete too. No SQL/package changes are needed for this fix. See `docs/FLUTTER_SETUP.md`. After this checkpoint, implement Buy Now and checkout with the trusted payment endpoint, safe retries, and actual backend totals; payment navigation must never mark an order paid.
 
 Before relying on the worker/real checkout, use the current generated bundles for `reconcile-payments` and `create-payment`; they include session-ID response compatibility too. Their previous deployment instructions were supplied but their runtime results were not verified.
 
@@ -82,7 +91,7 @@ The `supabase/setup/verify.sql` checkpoint is now explicitly user-reported all s
 
 Then follow the full guide for Auth/admin setup, Xendit Test Mode secrets, browser-editor function deployment, webhook registration, and Cron/Vault worker configuration. Actual project/account access remains unverified. Do not claim connection success until the hosted checks and a genuine test transaction pass.
 
-Current local Flutter milestone is implemented, awaiting device/runtime verification. The next implementation milestone is persistent cart, Buy Now, addresses, and checkout after the current foundation check. Continue using the existing `ecommerce/` app and accepted dark layout.
+Flutter foundation is user-reported good; persistent cart and addresses are locally implemented, awaiting device verification. Next implementation work is Buy Now/checkout, followed by Xendit payment UI and order history. Continue using the existing `ecommerce/` app and accepted dark layout.
 
 Keep the one-store Android app, shared customer/admin app, and fixed shipping fee as proposals until confirmed through discussion or an implementation request. The user has confirmed the dark-theme direction; the final font, shop name, and product imagery remain open.
 

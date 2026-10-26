@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../services/shop_gateway.dart';
 import 'auth_screen.dart';
+import 'addresses_screen.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key, required this.gateway});
@@ -95,6 +96,17 @@ class _AccountScreenState extends State<AccountScreen> {
             ),
           ] else ...[
             Text(user.email, textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.location_on_outlined),
+              title: const Text('My addresses'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => AddressesScreen(gateway: widget.gateway),
+                ),
+              ),
+            ),
             const SizedBox(height: 24),
             FutureBuilder<ShopAccount>(
               key: ValueKey(user.id),
