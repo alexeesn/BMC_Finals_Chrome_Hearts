@@ -53,7 +53,7 @@ Proposed main navigation: Home, Categories, Cart, Account.
 
 Detailed proposed layouts and screen states: [Screen plan](docs/SCREEN_PLAN.md).
 Offline interactive design preview: [Shopping flow](docs/previews/shopping-flow.html).
-These artifacts use fictional data for review; the Flutter app has not been implemented from them yet.
+The preview uses fictional data for review. The existing Flutter app now implements the dark catalog/details and auth/account foundation with live Supabase queries. Cart/checkout and admin management screens remain pending. See [Flutter setup](docs/FLUTTER_SETUP.md) for device checkpoints and current verification limits.
 
 ### Shopping behavior
 
@@ -97,7 +97,7 @@ Admin access must be provisioned through a trusted process and enforced on the b
 - Payments: order link, Xendit reference, amount/currency, and state.
 
 Detailed proposal: [Database and permissions plan](docs/DATABASE_PLAN.md), including trusted roles, shop settings, inventory reservations, and a webhook inbox.
-Setup walkthrough: [Supabase + Xendit guide](docs/SUPABASE_XENDIT_SETUP.md). Local SQL migrations, seed, four Edge handlers, dashboard bundler, owner setup scripts, and tests are now available under `supabase/` and `scripts/`. They have not been deployed to the user's accounts. See [backend package](supabase/README.md) and [API/recovery guide](docs/BACKEND_API.md).
+Setup walkthrough: [Supabase + Xendit guide](docs/SUPABASE_XENDIT_SETUP.md). Local SQL migrations, seed, four Edge handlers, dashboard bundler, owner setup scripts, and tests are available under `supabase/` and `scripts/`. The user reports successful hosted SQL setup, webhook sample delivery, worker checks, admin provisioning, and six database checks. An actual PAY transaction remains unverified. See [backend package](supabase/README.md) and [API/recovery guide](docs/BACKEND_API.md).
 
 The supplied migrations implement constraints, ownership policies, trusted role provisioning, and the initial reservation strategy. Supabase Auth manages credentials; there is no separate password table. Runtime deployment remains pending.
 

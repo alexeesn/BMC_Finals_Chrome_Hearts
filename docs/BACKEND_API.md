@@ -64,6 +64,10 @@ Admins can add/edit products/categories/image metadata under RLS. Archive catalo
 
 Configure `payment_session.completed` and `payment_session.expired` destinations to `xendit-webhook`. Other event types are ignored by this implementation. Matching verification token is required before any database or provider action.
 
+Session IDs may arrive as `data.payment_session_id` or the older/dashboard `data.id`. Both are accepted; conflicting values are rejected. The provider's session response supports the same aliases.
+
+After token verification, explicitly non-PAY session events and references outside this shop's `bmc_<order UUID>` namespace are acknowledged with HTTP 200 and an `ignored` reason, without database/provider calls. Xendit's supplied dashboard fixture observed during setup uses `id`, `reference_id: test_session`, `session_type: SAVE`, and IDR. Its successful acknowledgement proves endpoint/token handling, not a completed shop payment. Missing/malformed IDs on the shop's PAY events are still rejected; real payment evidence requirements are unchanged.
+
 The handler durably records a deduplicated inbox event and queries the provider using the server's test key. It checks the session's reference/amount/currency/merchant/flow, then retrieves successful captured payment evidence before applying paid status. An authorized/partially captured payment is insufficient. An expired session with a still-payable asynchronous attempt retains its hold for reconciliation.
 
 Failures return retryable errors; the stored inbox can also be retried by the worker. The Cron worker is required to handle missed callbacks and expiries; it is not optional when demonstrating complete stock lifecycle handling.

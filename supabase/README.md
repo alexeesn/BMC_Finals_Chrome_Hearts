@@ -58,6 +58,7 @@ Local tests cover PostgreSQL behavior and injected HTTP responses. They do not e
 - Only one request can claim creation of a provider resource for an order.
 - A creation timeout keeps stock held until reconciliation; it never blindly retries payment creation.
 - Webhook payload status/amount is not trusted. The backend fetches the session and, for a claimed success, its captured payment evidence.
+- Session IDs support both `payment_session_id` and `id` payload fields, with conflicting IDs rejected. Authenticated non-PAY/unrelated-reference fixtures receive an ignored acknowledgement without order mutations.
 - Duplicate/out-of-order updates cannot consume inventory twice or regress a paid order.
 - Cart cleanup checks the original source-row revision; Buy Now leaves the cart intact.
 - Role assignments and order/payment/inventory mutations are inaccessible to customer direct writes.

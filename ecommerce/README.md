@@ -1,17 +1,15 @@
-# ecommerce
+# CH / Collection — school ecommerce
 
-A new Flutter project.
+Existing Flutter app using Supabase Auth and catalog data, with the accepted dark theme.
+Current milestone: collection/search, product details/options, login/register, sessions,
+and account role display. Cart, checkout, payments UI, and admin management are pending.
 
-## Getting Started
+From this folder:
 
-This project is a starting point for a Flutter application.
+```powershell
+flutter pub get
+flutter run
+```
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+See [Flutter setup and checkpoints](../docs/FLUTTER_SETUP.md) for configuration,
+manual account checks, tests, and current verification limits.

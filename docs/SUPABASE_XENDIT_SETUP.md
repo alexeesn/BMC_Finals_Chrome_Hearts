@@ -69,7 +69,7 @@ Hindi database connection string ang ibibigay sa Xendit. Public HTTPS Edge Funct
    - [0004_storage.sql](../supabase/migrations/0004_storage.sql) — product image bucket/policy.
 3. Run one migration at a time. Kapag may error, itigil muna ang susunod na file at itama ang exact error; huwag basta ulit-ulitin lahat sa existing database.
 4. Run [seed.sql](../supabase/seed.sql) para sa fictional demo catalog. Sample shipping fee ay PHP 150, configurable sa `shop_settings.shipping_fee_minor` as `15000` centavos.
-5. Run [setup/verify.sql](../supabase/setup/verify.sql). Expected: 14 listed tables with RLS enabled, 3 demo products, 7 variants, at `product-images` bucket. Isa sa variants ay zero stock.
+5. Run [setup/verify.sql](../supabase/setup/verify.sql). Isang result table ang lalabas: six checks, all with status `OK` for the unmodified seed. Counts: 14 tables, 14 with RLS enabled, 3 demo products, 7 variants, 1 configured `product-images` bucket, and 1 PHP/PH settings row. Isa sa variants ay zero stock.
 6. Huwag i-run sa hosted project ang `supabase/tests/bootstrap.sql`; local mock Auth/Storage setup lang iyon.
 
 **Checkpoint:** walang migration errors at nasa database ang tables, policies, functions, at sample data. Hindi sapat na may tables lang: kailangang subukan ang access bilang dalawang magkahiwalay na signed-in customers, dahil privileged ang SQL Editor. [RLS reference](https://supabase.com/docs/guides/database/postgres/row-level-security).
@@ -108,13 +108,15 @@ Hindi database connection string ang ibibigay sa Xendit. Public HTTPS Edge Funct
 ## Step 7 — I-save ang secrets sa Supabase
 
 1. Buksan ang tamang Supabase project → Edge Functions → Secrets.
-2. Idagdag at i-save ang dalawang entries:
+2. Idagdag at i-save ang tatlong entries:
 
 | Name | Value |
 | --- | --- |
 | `XENDIT_SECRET_KEY` | Test secret key mula sa Xendit |
 | `XENDIT_WEBHOOK_TOKEN` | Webhook verification token mula sa same Xendit environment |
 | `RECONCILE_TOKEN` | Sarili mong long random worker token, at least 32 characters; generate in your password manager |
+
+Dashboard-only alternative para sa worker token: sa SQL Editor, run `select gen_random_uuid()::text || gen_random_uuid()::text as reconcile_token;` at kopyahin ang result directly sa secret value. This generates a value without changing tables. Keep the value private; do not paste it into chat or repository files. Save the same value securely for the later Vault configuration.
 
 3. Exact spelling ang gamitin. Function code reads these environment variables; wala silang hardcoded values sa source.
 4. For Flutter Web later, add `APP_ORIGINS` as a comma-separated list of exact allowed browser origins. Native Android requests do not need an Origin. Unknown browser origins are rejected by default.
@@ -174,11 +176,16 @@ https://<project-ref>.supabase.co/functions/v1/xendit-webhook
 4. Ilagay ang same HTTPS webhook URL sa relevant event destinations. Enable retries kung available.
 5. Save and Test. Tingnan ang HTTP result at Supabase function logs. A sample test event may use a reference that does not correspond to a real order: verify transport/authentication separately, and do not force a customer order to paid just to pass a test.
 
+For the built-in sample received during our setup (`data.id`, `session_type: SAVE`, `reference_id: test_session`), the updated handler should return HTTP 200 with `received: true`, `ignored: true`, and reason `UNSUPPORTED_SESSION_TYPE`. This is expected: our app creates PAY sessions, so no order/payment update is made for that sample. Another unrelated reference can return `UNRELATED_REFERENCE`.
+
+If the old deployment returns `Invalid provider resource ID` for that sample, open Supabase → Edge Functions → `xendit-webhook` → Code, replace the code with the latest entire `supabase/dashboard/xendit-webhook/index.ts`, and Deploy updates. Keep JWT verification OFF. Retry both dashboard tests after deployment. This patch needs no SQL migration. Other generated handlers also include session-ID response compatibility; use the current bundles when updating their deployments.
+
 **Checkpoint:** nakakarating ang matching test event. Hindi nito pinapatunayang gumagana na ang whole checkout. [Session webhook mapping](https://docs.xendit.co/docs/migrate-to-payment-session), [Xendit webhook behavior](https://docs.xendit.co/docs/handling-webhooks).
 
 ## Step 10B — I-schedule ang recovery/expiry worker
 
 1. After deploying the worker, enable Cron/`pg_cron`, `pg_net`, and Vault using the Supabase dashboard's integrations/extensions pages if not already available.
+   If Cron already shows Installed, leave it installed. The cleanup option manages job-run history; it is separate from enabling Cron. Continue to check `pg_net` instead of reinstalling the module.
 2. Sa Vault, create exactly one secret named `bmc_project_url` with your project HTTPS URL.
 3. Create `bmc_reconcile_token` with the **same value** as Edge Secret `RECONCILE_TOKEN`. Edge Secrets and Vault are separate stores; adding it to one does not add it to the other.
 4. Run [schedule-reconciliation.sql](../supabase/setup/schedule-reconciliation.sql) in SQL Editor. It checks prerequisites and creates/updates the `bmc-reconcile-payments` job for every minute. No actual token is embedded in that source file.
@@ -189,10 +196,10 @@ https://<project-ref>.supabase.co/functions/v1/xendit-webhook
 
 ## Step 11 — Ikabit ang Flutter app
 
-**Pending Flutter integration.** Backend files exist; app initialization, login, catalog, cart, and payment UI have not been implemented yet.
+**Foundation implemented locally.** Supabase initialization, public configuration, dark catalog/details, login/register, persisted sessions, and account role display exist in `ecommerce/`. Run the [Flutter setup and device checkpoints](FLUTTER_SETUP.md) first. Cart, address, checkout, and payment screens remain pending; the later steps below describe those future integrations.
 
 1. Gamitin ang existing `ecommerce/` app. Doon patakbuhin ang dependency commands na kasama sa implementation instructions; huwag mag-`flutter create` ulit.
-2. Ilagay ang Supabase URL at public/client key sa app configuration na ihahanda natin. Install the matching SDK version and initialize it before app startup.
+2. Nasa `ecommerce/lib/config/app_config.dart` na ang user-supplied URL/public key; `supabase_flutter` is configured and initialized before the collection loads. Run `flutter pub get`, then `flutter run` from `ecommerce/`.
 3. Add Android internet permission. HTTPS ang hosted services.
 4. Login, fetch products, save a cart/address, at call `create-payment` using the customer's session.
 5. Buksan ang returned hosted URL. The backend supplies its own deployed `payment-return` URLs. Huwag gamitin ang webhook URL bilang success-return page. The future app should intercept its matching return path or let the customer close the page, then refresh the existing order.

@@ -84,6 +84,41 @@ test('forged webhook token cannot reach database or provider', async () => {
   const result = await handleWebhook(request({event:'payment_session.completed',data:{payment_session_id:sid}}),bindings(() => assert.fail('No request expected')));
   assert.equal(result.status,401);
 });
+for (const event of ['payment_session.completed','payment_session.expired']) {
+  test('authenticated dashboard SAVE fixture is acknowledged without writes: ' + event, async () => {
+    const fixture = {event,data:{id:sid,reference_id:'test_session',session_type:'SAVE',country:'ID',currency:'IDR',amount:100000,status:event.endsWith('expired') ? 'EXPIRED' : 'COMPLETED'}};
+    const result = await handleWebhook(request(fixture,{'x-callback-token':env.XENDIT_WEBHOOK_TOKEN}),bindings(() => assert.fail('Dashboard fixture must not reach database/provider')));
+    assert.equal(result.status,200);
+    assert.deepEqual(await result.json(),{received:true,ignored:true,reason:'UNSUPPORTED_SESSION_TYPE'});
+  });
+}
+test('dashboard fixture still requires the real webhook verification token', async () => {
+  const result = await handleWebhook(request({event:'payment_session.expired',data:{id:sid,reference_id:'test_session',session_type:'SAVE'}},{'x-callback-token':'wrong-token'}),bindings(() => assert.fail('No network expected')));
+  assert.equal(result.status,401);
+});
+test('unrelated merchant references are acknowledged without touching orders', async () => {
+  const result = await handleWebhook(request({event:'payment_session.completed',data:{id:sid,reference_id:'test_session',session_type:'PAY'}},{'x-callback-token':env.XENDIT_WEBHOOK_TOKEN}),bindings(() => assert.fail('Unrelated event must not touch orders')));
+  assert.equal(result.status,200); assert.equal((await result.json()).reason,'UNRELATED_REFERENCE');
+});
+test('shop PAY callbacks accept data.id and retain provider verification', async () => {
+  let applied;
+  const result = await handleWebhook(request({event:'payment_session.completed',data:{id:sid,reference_id:session.reference_id,session_type:'PAY',status:'COMPLETED'}},{'x-callback-token':env.XENDIT_WEBHOOK_TOKEN}),bindings((url,options) => {
+    if (url.endsWith('/ecom_record_event')) return response({id:oid,state:'pending'});
+    if (url.endsWith('/sessions/' + sid)) return response({...session,id:sid,payment_session_id:undefined});
+    if (url.endsWith('/ecom_apply_session')) { applied=JSON.parse(options.body).p_session; return response({}); }
+    if (url.endsWith('/ecom_finish_event')) return response(null);
+    assert.fail(url);
+  }));
+  assert.equal(result.status,200); assert.equal(applied.id,sid); assert.equal(applied.status,'ACTIVE'); assert.equal(applied.payment_succeeded,false);
+});
+test('conflicting canonical and legacy IDs cannot select a payment resource', async () => {
+  const result = await handleWebhook(request({event:'payment_session.completed',data:{id:sid,payment_session_id:'ps-bbbbbbbbbbbbbbbbbbbbbbbb',reference_id:session.reference_id,session_type:'PAY'}},{'x-callback-token':env.XENDIT_WEBHOOK_TOKEN}),bindings(() => assert.fail('No network expected')));
+  assert.equal(result.status,400); assert.match((await result.json()).error,/Conflicting/);
+});
+test('missing IDs on shop PAY callbacks are rejected rather than acknowledged', async () => {
+  const result = await handleWebhook(request({event:'payment_session.completed',data:{reference_id:session.reference_id,session_type:'PAY'}},{'x-callback-token':env.XENDIT_WEBHOOK_TOKEN}),bindings(() => assert.fail('No network expected')));
+  assert.equal(result.status,400); assert.match((await result.json()).error,/Invalid provider resource ID/);
+});
 test('webhook ignores claimed paid status and looks up the actual provider session', async () => {
   let applied;
   const result = await handleWebhook(request({event:'payment_session.completed',data:{payment_session_id:sid,status:'COMPLETED',amount:1}},{'x-callback-token':env.XENDIT_WEBHOOK_TOKEN}),bindings((url,options) => {
