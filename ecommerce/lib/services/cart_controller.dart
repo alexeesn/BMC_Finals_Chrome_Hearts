@@ -13,7 +13,7 @@ class CartController extends ChangeNotifier {
       _owner = gateway.currentUser?.id;
       _session++;
       _request++;
-      lines = const [];
+      _lines = const [];
       error = null;
       busy = false;
       loading = false;
@@ -28,7 +28,9 @@ class CartController extends ChangeNotifier {
   int _session = 0;
   int _request = 0;
   bool _disposed = false;
-  List<CartLine> lines = const [];
+  List<CartLine> _lines = const [];
+  List<CartLine> get lines =>
+      gateway.currentUser?.id == _owner ? _lines : const [];
   bool loading = false;
   bool busy = false;
   String? error;
@@ -46,7 +48,7 @@ class CartController extends ChangeNotifier {
       if (!_disposed &&
           request == _request &&
           _owner == gateway.currentUser?.id) {
-        lines = List.unmodifiable(result);
+        _lines = List.unmodifiable(result);
       }
     } catch (_) {
       if (!_disposed && request == _request) {

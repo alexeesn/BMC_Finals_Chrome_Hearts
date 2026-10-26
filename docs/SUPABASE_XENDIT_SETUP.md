@@ -197,7 +197,7 @@ If the old deployment returns `Invalid provider resource ID` for that sample, op
 
 ## Step 11 — Ikabit ang Flutter app
 
-**Foundation, cart, addresses, and checkout review implemented locally.** Supabase initialization, public configuration, dark catalog/details, login/register, persisted sessions, account role display, persistent cart, and saved-address management exist in `ecommerce/`. Buy Now and selected-cart checkout open an address selector and server-priced review after applying 0005. Run the [Flutter setup and device checkpoints](FLUTTER_SETUP.md) first. Order/payment submission and payment screens remain pending; the later steps below describe those future integrations. Cart/addresses use the original schema; checkout review additionally requires 0005.
+**Shopping and payment UI implemented locally.** Supabase initialization, public configuration, dark catalog/details, login/register, persisted sessions, cart/addresses, Buy Now, checkout review, Place Order, order details/history, and an external Xendit test-page action exist in `ecommerce/`. Review requires migration 0005. Follow [Flutter checkpoints](FLUTTER_SETUP.md), then [payment setup/checkpoints](PAYMENT_TEST.md), including the current `create-payment`/worker bundles and exact `APP_ORIGINS` for Chrome. Actual PAY/provider behavior remains unverified; no additional SQL is needed for payment UI.
 
 1. Gamitin ang existing `ecommerce/` app. Doon patakbuhin ang dependency commands na kasama sa implementation instructions; huwag mag-`flutter create` ulit.
 2. Nasa `ecommerce/lib/config/app_config.dart` na ang user-supplied URL/public key; `supabase_flutter` is configured and initialized before the collection loads. Run `flutter pub get`, then `flutter run` from `ecommerce/`.

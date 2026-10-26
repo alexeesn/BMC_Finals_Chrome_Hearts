@@ -96,7 +96,7 @@ class _ShopShellState extends State<ShopShell> {
           onViewCart: () => setState(() => _tab = 1),
         ),
         CartScreen(cart: _cart),
-        AccountScreen(gateway: widget.gateway),
+        AccountScreen(gateway: widget.gateway, onOrdersClosed: _cart.refresh),
       ],
     ),
     bottomNavigationBar: NavigationBar(

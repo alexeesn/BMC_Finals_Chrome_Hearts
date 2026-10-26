@@ -36,6 +36,7 @@ class _ProductScreenState extends State<ProductScreen> {
       await openCheckout(context, widget.cart.gateway, selection);
     } finally {
       if (mounted) setState(() => _buying = false);
+      await widget.cart.refresh();
     }
   }
 

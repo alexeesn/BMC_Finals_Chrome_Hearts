@@ -4,7 +4,9 @@ Existing Flutter app using Supabase Auth and catalog data, with the accepted dar
 Current milestone: collection/search, product details/options, login/register, sessions,
 account role display, persistent cart, saved delivery addresses, Buy Now, and checkout review.
 Apply `supabase/migrations/0005_checkout_quote.sql` before testing checkout review.
-Payment submission/UI, orders, and admin management are pending.
+Place Order, external Xendit test payment, and My orders are also implemented locally.
+Follow [payment setup/checkpoints](../docs/PAYMENT_TEST.md) before your first test payment.
+Actual hosted verification and admin management remain pending.
 
 From this folder:
 

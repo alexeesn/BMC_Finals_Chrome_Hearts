@@ -5,10 +5,12 @@ import 'package:flutter/material.dart';
 import '../services/shop_gateway.dart';
 import 'auth_screen.dart';
 import 'addresses_screen.dart';
+import 'orders_screen.dart';
 
 class AccountScreen extends StatefulWidget {
-  const AccountScreen({super.key, required this.gateway});
+  const AccountScreen({super.key, required this.gateway, this.onOrdersClosed});
   final ShopGateway gateway;
+  final Future<void> Function()? onOrdersClosed;
   @override
   State<AccountScreen> createState() => _AccountScreenState();
 }
@@ -96,6 +98,19 @@ class _AccountScreenState extends State<AccountScreen> {
             ),
           ] else ...[
             Text(user.email, textAlign: TextAlign.center),
+            ListTile(
+              leading: const Icon(Icons.receipt_long_outlined),
+              title: const Text('My orders'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () async {
+                await Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => OrdersScreen(gateway: widget.gateway),
+                  ),
+                );
+                await widget.onOrdersClosed?.call();
+              },
+            ),
             const SizedBox(height: 16),
             ListTile(
               leading: const Icon(Icons.location_on_outlined),
@@ -110,7 +125,7 @@ class _AccountScreenState extends State<AccountScreen> {
             const SizedBox(height: 24),
             FutureBuilder<ShopAccount>(
               key: ValueKey(user.id),
-              future: _account,
+              future: _userId == user.id ? _account : null,
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
                   return Column(

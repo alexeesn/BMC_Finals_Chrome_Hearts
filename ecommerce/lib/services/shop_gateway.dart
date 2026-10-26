@@ -3,6 +3,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/catalog.dart';
 import '../models/shopping.dart';
 import '../models/checkout.dart';
+import '../models/order.dart';
+import 'checkout_attempt_store.dart';
+import 'order_placement.dart';
 
 class ShopIdentity {
   const ShopIdentity(this.id, this.email);
@@ -16,8 +19,10 @@ class ShopAccount {
   final bool isAdmin;
 }
 
-abstract class ShopGateway {
+abstract class ShopGateway implements OrderGateway {
   ShopIdentity? get currentUser;
+  @override
+  String? get orderUserId => currentUser?.id;
   Stream<void> get authChanges;
   Future<List<CatalogProduct>> loadCatalog();
   Future<ShopAccount> loadAccount();
@@ -38,11 +43,14 @@ abstract class ShopGateway {
     CheckoutSelection selection,
     String addressId,
   );
+  Future<ShopOrder> loadOrder(String id);
+  Future<List<ShopOrder>> loadOrders();
 }
 
-class SupabaseShopGateway implements ShopGateway {
+class SupabaseShopGateway extends ShopGateway {
   SupabaseShopGateway(this.client);
   final SupabaseClient client;
+  final _attempts = CheckoutAttemptStore();
   @override
   ShopIdentity? get currentUser {
     final user = client.auth.currentUser;
@@ -334,6 +342,89 @@ class SupabaseShopGateway implements ShopGateway {
         throw ShoppingException(error.message);
       }
       rethrow;
+    }
+  }
+
+  @override
+  Future<CheckoutAttempt?> loadCheckoutAttempt() =>
+      _attempts.read(_requireUser());
+  @override
+  Future<void> saveCheckoutAttempt(CheckoutAttempt attempt) =>
+      _attempts.save(_requireUser(), attempt);
+  @override
+  Future<void> clearCheckoutAttempt(String expectedKey) =>
+      _attempts.clear(_requireUser(), expectedKey);
+
+  static const _orderFields =
+      'id,user_id,order_number,idempotency_key,payment_status,fulfillment_status,'
+      'subtotal_minor,shipping_minor,total_minor,created_at,expires_at,delivery_address,'
+      'order_items(product_name,option_label,quantity,unit_price_minor,line_total_minor)';
+
+  @override
+  Future<ShopOrder?> findOrderByCheckoutKey(String key) async {
+    final row = await client
+        .from('orders')
+        .select('id')
+        .eq('user_id', _requireUser())
+        .eq('idempotency_key', key)
+        .maybeSingle();
+    return row == null ? null : loadOrder(row['id'] as String);
+  }
+
+  @override
+  Future<ShopOrder> loadOrder(String id) async {
+    // Keep the explicit customer filter even for a signed-in admin.
+    final row = await client
+        .from('orders')
+        .select(_orderFields)
+        .eq('id', id)
+        .eq('user_id', _requireUser())
+        .single();
+    final payment = await client
+        .from('order_payment_summary')
+        .select('state,payment_url,expires_at')
+        .eq('order_id', id)
+        .maybeSingle();
+    return ShopOrder.fromJson(row, payment);
+  }
+
+  @override
+  Future<List<ShopOrder>> loadOrders() async {
+    final rows = await client
+        .from('orders')
+        .select(_orderFields)
+        .eq('user_id', _requireUser())
+        .order('created_at', ascending: false)
+        .limit(50);
+    if (rows.isEmpty) return [];
+    final payments = await client
+        .from('order_payment_summary')
+        .select('order_id,state,payment_url,expires_at')
+        .inFilter('order_id', rows.map((row) => row['id']).toList());
+    final byOrder = {
+      for (final payment in payments) payment['order_id']: payment,
+    };
+    return rows
+        .map((row) => ShopOrder.fromJson(row, byOrder[row['id']]))
+        .toList();
+  }
+
+  @override
+  Future<void> requestPayment(CheckoutAttempt attempt) async {
+    _requireUser();
+    try {
+      await client.functions
+          .invoke('create-payment', body: attempt.toJson())
+          .timeout(const Duration(seconds: 45));
+    } on FunctionException catch (error) {
+      final details = error.details;
+      final message = details is Map && details['error'] is String
+          ? (details['error'] as String).substring(
+              0,
+              (details['error'] as String).length.clamp(0, 180),
+            )
+          : 'Unable to confirm checkout (HTTP ${error.status}). Check My orders before retrying.';
+      throw PaymentRequestException(error.status, message);
     }
   }
 }

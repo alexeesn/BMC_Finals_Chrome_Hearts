@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
 
 import '../models/catalog.dart';
 import '../models/checkout.dart';
 import '../models/shopping.dart';
+import '../models/order.dart';
+import '../services/order_placement.dart';
 import '../services/shop_gateway.dart';
 import '../widgets/sign_in_prompt.dart';
 import 'addresses_screen.dart';
+import 'orders_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({
@@ -62,10 +66,75 @@ class _CheckoutReviewState extends State<_CheckoutReview> {
   bool _loading = true;
   String? _error;
   int _request = 0;
+  bool _placing = false;
+  CheckoutAttempt? _attempt;
+  CheckoutAttempt? _unfinished;
+  ShopOrder? _placedOrder;
+  late final _owner = widget.gateway.currentUser?.id;
   @override
   void initState() {
     super.initState();
-    _loadAddresses();
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    try {
+      final previous = await widget.gateway.loadCheckoutAttempt();
+      if (!mounted || widget.gateway.currentUser?.id != _owner) return;
+      setState(() => _unfinished = previous);
+      await _loadAddresses();
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error =
+              'Unable to restore checkout. Check My orders before continuing.';
+        });
+      }
+    }
+  }
+
+  Future<void> _place() async {
+    if (_placing || _quote == null || _unfinished != null) return;
+    _attempt ??= CheckoutAttempt(
+      key: const Uuid().v4(),
+      source: widget.selection.source,
+      addressId: _addressId!,
+      items: widget.selection.items,
+    );
+    setState(() {
+      _placing = true;
+      _error = null;
+    });
+    try {
+      final order = await placeOrResumeOrder(widget.gateway, _attempt!);
+      if (mounted && widget.gateway.currentUser?.id == _owner) {
+        setState(() => _placedOrder = order);
+      }
+    } on CheckoutRejected catch (error) {
+      if (mounted) {
+        setState(() => _attempt = null);
+        await _loadAddresses();
+        if (mounted) setState(() => _error = error.message);
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(
+          () => _error = error is ShoppingException ? error.message : 'Unable to confirm checkout. Retry this same checkout or check My orders.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _placing = false);
+    }
+  }
+
+  Future<void> _viewOrders() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => OrdersScreen(gateway: widget.gateway),
+      ),
+    );
+    if (mounted && _attempt == null) await _initialize();
   }
 
   Future<void> _loadAddresses() async {
@@ -137,125 +206,183 @@ class _CheckoutReviewState extends State<_CheckoutReview> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.gateway.currentUser?.id != _owner) {
+      return const Scaffold(
+        body: Center(
+          child: Text('Account changed. Return to checkout after signing in.'),
+        ),
+      );
+    }
+    if (_placedOrder != null) {
+      return OrderDetailsScreen(
+        gateway: widget.gateway,
+        orderId: _placedOrder!.id,
+        initialOrder: _placedOrder,
+        previousTotalMinor: _quote?.totalMinor,
+      );
+    }
     final quote = _quote;
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Checkout'),
-        actions: [
-          IconButton(
-            tooltip: 'Refresh checkout',
-            onPressed: _loading ? null : _loadAddresses,
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
-      ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 680),
-          child: ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              Text(
-                'Delivery address',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 12),
-              if (_addresses != null && _addresses!.isEmpty)
-                const Text('Add a delivery address to review your order.'),
-              if (_addresses != null && _addresses!.isNotEmpty)
-                DropdownButtonFormField<String>(
-                  key: ValueKey(_addressId),
-                  initialValue: _addressId,
-                  isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Deliver to'),
-                  items: _addresses!
-                      .map(
-                        (address) => DropdownMenuItem(
-                          value: address.id,
-                          child: Text(
-                            '${address.recipient} · ${address.city}${address.isDefault ? ' · Default' : ''}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: _loading
-                      ? null
-                      : (id) {
-                          if (id != null) _loadQuote(id);
-                        },
-                ),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: _loading ? null : _manageAddresses,
-                  icon: const Icon(Icons.location_on_outlined),
-                  label: const Text('Add / edit addresses'),
-                ),
-              ),
-              if (_loading)
-                const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Center(child: CircularProgressIndicator()),
-                ),
-              if (_error != null) ...[
+    final frozen = _attempt != null || _placing;
+    return PopScope(
+      canPop: !_placing,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Checkout'),
+          actions: [
+            IconButton(
+              tooltip: 'Refresh checkout',
+              onPressed: _loading || frozen ? null : _initialize,
+              icon: const Icon(Icons.refresh),
+            ),
+          ],
+        ),
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 680),
+            child: ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
                 Text(
-                  _error!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-                TextButton(
-                  onPressed: _loading ? null : _loadAddresses,
-                  child: const Text('Retry checkout'),
-                ),
-              ],
-              if (quote != null) ...[
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          quote.address.recipient,
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        Text(quote.address.phone),
-                        Text(quote.address.fullAddress),
-                        if (quote.address.instructions.isNotEmpty)
-                          Text(quote.address.instructions),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  'Order items',
+                  'Delivery address',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
-                ...quote.items.map(
-                  (item) => ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(item.name),
-                    subtitle: Text(
-                      '${item.option} · ${formatPesos(item.unitPriceMinor)} × ${item.quantity}',
-                    ),
-                    trailing: Text(formatPesos(item.lineTotalMinor)),
+                const SizedBox(height: 12),
+                if (_addresses != null && _addresses!.isEmpty)
+                  const Text('Add a delivery address to review your order.'),
+                if (_addresses != null && _addresses!.isNotEmpty)
+                  DropdownButtonFormField<String>(
+                    key: ValueKey(_addressId),
+                    initialValue: _addressId,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Deliver to'),
+                    items: _addresses!
+                        .map(
+                          (address) => DropdownMenuItem(
+                            value: address.id,
+                            child: Text(
+                              '${address.recipient} · ${address.city}${address.isDefault ? ' · Default' : ''}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: _loading || frozen
+                        ? null
+                        : (id) {
+                            if (id != null) _loadQuote(id);
+                          },
+                  ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: _loading || frozen ? null : _manageAddresses,
+                    icon: const Icon(Icons.location_on_outlined),
+                    label: const Text('Add / edit addresses'),
                   ),
                 ),
-                const Divider(height: 32),
-                _MoneyRow(label: 'Subtotal', value: quote.subtotalMinor),
-                _MoneyRow(label: 'Shipping', value: quote.shippingMinor),
-                const Divider(height: 24),
-                _MoneyRow(label: 'Total', value: quote.totalMinor, total: true),
-                const SizedBox(height: 20),
-                const Text(
-                  'Prices and stock are checked again when you continue to payment.',
-                ),
+                if (_loading)
+                  const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                if (_error != null) ...[
+                  Text(
+                    _error!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _loading || frozen ? null : _initialize,
+                    child: const Text('Retry checkout'),
+                  ),
+                ],
+                if (_unfinished != null) ...[
+                  const Text(
+                    'You have an unfinished checkout. Resume it from My orders first.',
+                  ),
+                  TextButton(
+                    onPressed: _placing ? null : _viewOrders,
+                    child: const Text('Open My orders'),
+                  ),
+                ],
+                if (_attempt != null && !_placing)
+                  TextButton(
+                    onPressed: _viewOrders,
+                    child: const Text('Check My orders'),
+                  ),
+                if (quote != null) ...[
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            quote.address.recipient,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          Text(quote.address.phone),
+                          Text(quote.address.fullAddress),
+                          if (quote.address.instructions.isNotEmpty)
+                            Text(quote.address.instructions),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Order items',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  ...quote.items.map(
+                    (item) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(item.name),
+                      subtitle: Text(
+                        '${item.option} · ${formatPesos(item.unitPriceMinor)} × ${item.quantity}',
+                      ),
+                      trailing: Text(formatPesos(item.lineTotalMinor)),
+                    ),
+                  ),
+                  const Divider(height: 32),
+                  _MoneyRow(label: 'Subtotal', value: quote.subtotalMinor),
+                  _MoneyRow(label: 'Shipping', value: quote.shippingMinor),
+                  const Divider(height: 24),
+                  _MoneyRow(
+                    label: 'Total',
+                    value: quote.totalMinor,
+                    total: true,
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Prices and stock are checked again when you continue to payment.',
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
+        bottomNavigationBar: quote == null
+            ? null
+            : SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: FilledButton(
+                    onPressed: _loading || _placing || _unfinished != null
+                        ? null
+                        : _place,
+                    child: Text(
+                      _placing
+                          ? 'Placing order…'
+                          : _attempt == null
+                          ? 'Place Order'
+                          : 'Retry same checkout',
+                    ),
+                  ),
+                ),
+              ),
       ),
     );
   }

@@ -7,7 +7,9 @@ loading/error/retry states, and image fallbacks. The display name `CH / COLLECTI
 is provisional. Seed products/prices remain fictional samples.
 
 Persistent cart, saved delivery addresses, Buy Now, and checkout review are implemented locally.
-Order/payment submission, payment screens, order history, and admin management remain pending.
+Place Order, canonical order details, external hosted test payment, and My orders are implemented locally.
+Follow [Payment setup and demo checkpoints](PAYMENT_TEST.md) before submitting the first test order.
+Real provider/browser verification and admin management remain pending.
 An admin role label does not imply that admin management screens are implemented.
 
 ## Run on your computer
@@ -78,8 +80,9 @@ backend; the actual order/payment operation will validate again. Cart and review
    insufficient stock, or deleted address should stop the review with a useful error.
 9. Reaching this screen must not create an order/payment, reserve stock, or clear the cart.
 
-This stage implements order review. Xendit page opening/order submission is the next stage;
-there is no active Pay button yet. The existing Edge backend remains the payment authority.
+Place Order is now available after the quote. Before using it, follow
+[Payment setup and demo checkpoints](PAYMENT_TEST.md), including current deployed bundles and browser origins.
+The existing Edge backend remains the payment authority; no new SQL is needed for payment UI.
 
 ## Public configuration
 

@@ -119,6 +119,11 @@ class _AddressListState extends State<_AddressList> {
     body: FutureBuilder<List<DeliveryAddress>>(
       future: _addresses,
       builder: (context, snapshot) {
+        if (widget.gateway.currentUser?.id != widget.owner) {
+          return const Center(
+            child: Text('Account changed. Return to My addresses.'),
+          );
+        }
         if (snapshot.hasError) {
           return Center(
             child: Column(

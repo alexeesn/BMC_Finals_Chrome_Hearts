@@ -57,6 +57,18 @@ Reuse the same idempotency key after an interrupted request with the same payloa
 
 The response contains `order_id`, `order_number`, `payment_status`, `payment_state`, `total_minor`, `currency`, `expires_at`, and an active `payment_url` when available. Internal claims and delivery snapshots are not returned by this endpoint.
 
+The Flutter app now calls this endpoint from Place Order and then reads the canonical owned
+`orders`/`order_items` and `order_payment_summary` records. It shows final totals/snapshots before a
+separate Continue to Xendit tap. A total changed since the quote is explicitly called out.
+The client never writes payment/fulfillment states or treats navigation as success.
+
+`placeOrResumeOrder` caches a frozen key/body before sending, checks for an existing owned order,
+and checks again after an interrupted/error response. Only an absent order or `reserved` provider
+state can invoke creation with that same key; the Edge claim remains the authority for whether
+the provider is actually called. Existing active/creating/unknown/terminal orders are opened instead.
+The local cache is best-effort recovery convenience; database idempotency/claims provide correctness.
+No payment credentials or address text are stored in that cache. See [payment checkpoints](PAYMENT_TEST.md).
+
 - 200: inspect state; open a URL only if active. A paid/expired/cancelled response is not a new payable session.
 - 400: invalid selection/address/quantity/stock or reuse of a key for a different request.
 - 401: missing/expired customer session.

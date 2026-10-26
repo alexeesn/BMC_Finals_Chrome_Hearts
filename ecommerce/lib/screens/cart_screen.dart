@@ -20,6 +20,11 @@ class _CartScreenState extends State<CartScreen> {
   final _known = <String>{};
   String? _owner;
 
+  Future<void> _checkout(CheckoutSelection selection) async {
+    await openCheckout(context, widget.cart.gateway, selection);
+    await widget.cart.refresh();
+  }
+
   Future<void> _change(Future<void> Function() operation) async {
     try {
       await operation();
@@ -268,9 +273,7 @@ class _CartScreenState extends State<CartScreen> {
                                   selected.isNotEmpty &&
                                   selected.length <= 20 &&
                                   selected.every((line) => line.available)
-                              ? () => openCheckout(
-                                  context,
-                                  cart.gateway,
+                              ? () => _checkout(
                                   CheckoutSelection.cart(
                                     selected.map((line) => line.id),
                                   ),

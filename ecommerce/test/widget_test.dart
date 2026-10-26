@@ -4,6 +4,9 @@ import 'package:ecommerce/app.dart';
 import 'package:ecommerce/models/catalog.dart';
 import 'package:ecommerce/models/shopping.dart';
 import 'package:ecommerce/models/checkout.dart';
+import 'package:ecommerce/models/order.dart';
+import 'package:ecommerce/services/order_placement.dart';
+import 'package:ecommerce/screens/orders_screen.dart';
 import 'package:ecommerce/screens/checkout_screen.dart';
 import 'package:ecommerce/services/cart_controller.dart';
 import 'package:ecommerce/screens/addresses_screen.dart';
@@ -54,6 +57,38 @@ const demoAddress = DeliveryAddress(
   isDefault: true,
 );
 
+ShopOrder demoOrder(
+  String key, {
+  String status = 'pending',
+  String state = 'active',
+}) => ShopOrder(
+  id: 'order-$key',
+  ownerId: 'admin',
+  number: 'BMC-DEMO',
+  checkoutKey: key,
+  paymentStatus: status,
+  fulfillmentStatus: status == 'paid' ? 'preparing' : 'unfulfilled',
+  paymentState: state,
+  subtotalMinor: 1200000,
+  shippingMinor: 15000,
+  totalMinor: 1215000,
+  createdAt: DateTime(2026, 10, 26),
+  expiresAt: DateTime.now().add(const Duration(minutes: 30)),
+  address: demoAddress,
+  items: const [
+    QuotedItem(
+      name: 'Archive Tee',
+      option: 'M',
+      quantity: 1,
+      unitPriceMinor: 1200000,
+      lineTotalMinor: 1200000,
+    ),
+  ],
+  paymentUrl: state == 'active'
+      ? 'https://checkout-staging.xendit.co/test-payment'
+      : null,
+);
+
 class FakeShop extends ShopGateway {
   final events = StreamController<void>.broadcast();
   ShopIdentity? identity;
@@ -67,10 +102,58 @@ class FakeShop extends ShopGateway {
   bool mutationFails = false;
   int addressSaves = 0;
   CheckoutSelection? lastQuoteSelection;
+  final attempts = <String, CheckoutAttempt>{};
+  final orders = <String, List<ShopOrder>>{};
+  int paymentRequests = 0;
+  Object? paymentError;
+  bool createBeforeError = false;
+  bool cacheFails = false;
+  Completer<void>? paymentWait;
+  final requestedKeys = <String>[];
   @override
   ShopIdentity? get currentUser => identity;
   @override
   Stream<void> get authChanges => events.stream;
+
+  @override
+  Future<CheckoutAttempt?> loadCheckoutAttempt() async =>
+      attempts[identity!.id];
+  @override
+  Future<void> saveCheckoutAttempt(CheckoutAttempt attempt) async {
+    if (cacheFails) throw StateError('Local storage unavailable');
+    attempts[identity!.id] = attempt;
+  }
+
+  @override
+  Future<void> clearCheckoutAttempt(String expectedKey) async {
+    if (attempts[identity!.id]?.key == expectedKey) {
+      attempts.remove(identity!.id);
+    }
+  }
+
+  @override
+  Future<ShopOrder?> findOrderByCheckoutKey(String key) async =>
+      (orders[identity!.id] ?? [])
+          .where((order) => order.checkoutKey == key)
+          .firstOrNull;
+  @override
+  Future<ShopOrder> loadOrder(String id) async =>
+      orders[identity!.id]!.firstWhere((order) => order.id == id);
+  @override
+  Future<List<ShopOrder>> loadOrders() async =>
+      List.of(orders[identity!.id] ?? []);
+  @override
+  Future<void> requestPayment(CheckoutAttempt attempt) async {
+    final owner = identity!.id;
+    paymentRequests++;
+    requestedKeys.add(attempt.key);
+    await paymentWait?.future;
+    if (paymentError == null || createBeforeError) {
+      (orders[owner] ??= []).add(demoOrder(attempt.key));
+    }
+    if (paymentError != null) throw paymentError!;
+  }
+
   @override
   Future<List<CatalogProduct>> loadCatalog() async {
     if (catalogFails) throw StateError('Offline');
@@ -222,6 +305,174 @@ void main() {
   late FakeShop shop;
   setUp(() => shop = FakeShop());
   tearDown(() => shop.events.close());
+
+  CheckoutAttempt attempt(String key) => CheckoutAttempt(
+    key: key,
+    source: 'buy_now',
+    addressId: 'address-1',
+    items: CheckoutSelection.buyNow('m', 1).items,
+  );
+
+  test('Lost checkout response recovers the committed order without another provider request', () async {
+    shop.identity = const ShopIdentity('admin', 'owner@example.com');
+    shop.paymentError = TimeoutException('Response lost');
+    shop.createBeforeError = true;
+    final request = attempt('same-checkout');
+    final order = await placeOrResumeOrder(shop, request);
+    expect(order.paid, isFalse);
+    expect(shop.paymentRequests, 1);
+    expect(shop.attempts['admin'], isNull);
+    await placeOrResumeOrder(shop, request);
+    expect(shop.paymentRequests, 1);
+  });
+
+  test('Unconfirmed checkout retains its original key and blocks a different retry', () async {
+    shop.identity = const ShopIdentity('admin', 'owner@example.com');
+    shop.paymentError = TimeoutException('Network unavailable');
+    final request = attempt('same-checkout');
+    await expectLater(
+      placeOrResumeOrder(shop, request),
+      throwsA(isA<ShoppingException>()),
+    );
+    expect(shop.attempts['admin']!.key, request.key);
+    await expectLater(
+      placeOrResumeOrder(shop, attempt('different-checkout')),
+      throwsA(isA<ShoppingException>()),
+    );
+    expect(shop.paymentRequests, 1);
+    shop.paymentError = null;
+    await placeOrResumeOrder(shop, request);
+    expect(shop.requestedKeys, ['same-checkout', 'same-checkout']);
+  });
+
+  test('Local recovery-save failure prevents a payment request', () async {
+    shop.identity = const ShopIdentity('admin', 'owner@example.com');
+    shop.cacheFails = true;
+    await expectLater(
+      placeOrResumeOrder(shop, attempt('not-sent')),
+      throwsStateError,
+    );
+    expect(shop.paymentRequests, 0);
+  });
+
+  test('Confirmed validation rejection without an order releases the editable draft', () async {
+    shop.identity = const ShopIdentity('admin', 'owner@example.com');
+    shop.paymentError = const PaymentRequestException(400, 'Not enough stock');
+    await expectLater(
+      placeOrResumeOrder(shop, attempt('rejected')),
+      throwsA(isA<CheckoutRejected>()),
+    );
+    expect(shop.attempts['admin'], isNull);
+    expect(shop.orders['admin'], isNull);
+  });
+
+  test(
+    'Account change during placement cannot display the previous account order',
+    () async {
+      shop.identity = const ShopIdentity('admin', 'owner@example.com');
+      shop.paymentWait = Completer<void>();
+      final result = placeOrResumeOrder(shop, attempt('in-flight'));
+      while (shop.paymentRequests == 0) {
+        await Future<void>.delayed(Duration.zero);
+      }
+      shop.identity = const ShopIdentity('customer', 'customer@example.com');
+      final assertion = expectLater(result, throwsA(isA<ShoppingException>()));
+      shop.paymentWait!.complete();
+      await assertion;
+      expect(shop.attempts['admin']!.key, 'in-flight');
+      expect(shop.attempts['customer'], isNull);
+    },
+  );
+
+  testWidgets('Rapid Place Order taps submit one checkout', (tester) async {
+    shop.identity = const ShopIdentity('admin', 'owner@example.com');
+    shop.addresses['admin'] = [demoAddress];
+    shop.paymentWait = Completer<void>();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CheckoutScreen(
+          gateway: shop,
+          selection: CheckoutSelection.buyNow('m', 1),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final place = find.text('Place Order');
+    await tester.tap(place);
+    await tester.tap(place);
+    await tester.pump();
+    expect(shop.paymentRequests, 1);
+    shop.paymentWait!.complete();
+    await tester.pumpAndSettle();
+    expect(find.text('Pending payment'), findsOneWidget);
+    expect(shop.orders['admin']!.length, 1);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('An initial order from a different account is hidden', (
+    tester,
+  ) async {
+    shop.identity = const ShopIdentity('customer', 'customer@example.com');
+    final oldOrder = demoOrder('owner-order');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: OrderDetailsScreen(
+          gateway: shop,
+          orderId: oldOrder.id,
+          initialOrder: oldOrder,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Account changed. Return to My orders.'), findsOneWidget);
+    expect(find.text(demoAddress.phone), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets(
+    'Opening payment never marks paid; only a refreshed backend state does',
+    (tester) async {
+      shop.identity = const ShopIdentity('admin', 'owner@example.com');
+      final order = demoOrder('existing');
+      shop.orders['admin'] = [order];
+      var opened = 0;
+      tester.view.physicalSize = const Size(800, 1200);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: OrderDetailsScreen(
+            gateway: shop,
+            orderId: order.id,
+            initialOrder: order,
+            launchPayment: (_) async {
+              opened++;
+              return true;
+            },
+            previousTotalMinor: 1200000,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final pay = find.text('Continue to Xendit');
+      await tester.ensureVisible(pay);
+      await tester.tap(pay);
+      await tester.pumpAndSettle();
+      expect(opened, 1);
+      expect(find.textContaining('Order total changed from'), findsOneWidget);
+      expect(find.text('Pending payment'), findsOneWidget);
+      expect(find.text('Paid'), findsNothing);
+      shop.orders['admin'] = [
+        demoOrder('existing', status: 'paid', state: 'paid'),
+      ];
+      await tester.tap(find.byTooltip('Refresh order status'));
+      await tester.pumpAndSettle();
+      expect(find.text('Paid'), findsOneWidget);
+      expect(find.text('Continue to Xendit'), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
 
   testWidgets(
     'Buy Now opens a server-priced review without changing the saved cart',

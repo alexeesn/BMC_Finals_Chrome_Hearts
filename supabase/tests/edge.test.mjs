@@ -165,6 +165,26 @@ test('partial capture is not accepted as the full order payment', async () => {
   }));
   assert.equal((await verifiedSession(backend,sid)).payment_succeeded,false);
 });
+test('configured browser preflight succeeds without auth, database, or provider calls', async () => {
+  const origin = 'http://localhost:5173';
+  const result = await handleCreate(new Request('https://example.supabase.co/functions/v1/create-payment', {
+    method:'OPTIONS', headers:{origin,'access-control-request-method':'POST',
+      'access-control-request-headers':'authorization,apikey,content-type,x-client-info'},
+  }), bindings(() => assert.fail('Preflight must not make network calls'), {APP_ORIGINS:origin}));
+  assert.equal(result.status,204);
+  assert.equal(result.headers.get('access-control-allow-origin'),origin);
+  for (const header of ['authorization','apikey','content-type','x-client-info']) {
+    assert.ok(result.headers.get('access-control-allow-headers').split(',').map(value => value.trim()).includes(header));
+  }
+});
+test('configured browser receives readable auth errors with CORS headers', async () => {
+  const origin = 'http://localhost:5173';
+  const result = await handleCreate(request(body,{origin,authorization:'Bearer sb_publishable_fixture'}),
+    bindings(() => assert.fail('Invalid auth must not make network calls'),{APP_ORIGINS:origin}));
+  assert.equal(result.status,401);
+  assert.equal(result.headers.get('access-control-allow-origin'),origin);
+  assert.equal(typeof (await result.json()).error,'string');
+});
 test('unconfigured browser origins cannot call checkout', async () => {
   const result = await handleCreate(request(body,{origin:'https://untrusted.example'}),bindings(() => assert.fail('No network expected')));
   assert.equal(result.status,403);
